@@ -6,22 +6,16 @@ export interface HomeownerRepository {
   getAuditForOwner(auditId: string, ownerId: string): Promise<AuditRecord | null>;
 }
 
-/**
- * Temporary adapter used by the API foundation.
- * Replace this implementation with PostgreSQL/Prisma persistence before production.
- */
+/** Development-only in-memory adapter. Production uses PostgresHomeownerRepository when DATABASE_URL is configured. */
 export class MemoryHomeownerRepository implements HomeownerRepository {
   private readonly properties = new Map<string, PropertyRecord>();
   private readonly audits = new Map<string, AuditRecord>();
 
   constructor() {
     this.properties.set('demo-property-1', {
-      id: 'demo-property-1',
-      ownerId: 'demo-homeowner',
-      nickname: 'Demo Family Home',
+      id: 'demo-property-1', ownerId: 'demo-homeowner', nickname: 'Demo Family Home',
       address: { suburb: 'Mondeor', city: 'Johannesburg', province: 'Gauteng', postalCode: '2091', country: 'ZA' },
-      propertyType: 'HOUSE',
-      lifecycle: 'onboarding',
+      propertyType: 'HOUSE', lifecycle: 'onboarding',
     });
   }
 
