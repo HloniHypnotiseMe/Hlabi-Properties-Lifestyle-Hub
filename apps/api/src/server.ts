@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { auditAreas, conditionGrades } from './domain.js';
 import { MemoryHomeownerRepository } from './repository.js';
+import { integrationHealth } from './integrations/health.js';
 
 const app = express();
 const repository = new MemoryHomeownerRepository();
@@ -10,6 +11,7 @@ const port = Number(process.env.PORT ?? 4000);
 app.use(express.json({ limit: '256kb' }));
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'hlabi-api' }));
+app.get('/health/integrations', (_req, res) => res.json({ ok: true, integrations: integrationHealth() }));
 
 // Temporary identity adapter. Production must derive ownerId from a verified session/token.
 app.use((req, _res, next) => {
