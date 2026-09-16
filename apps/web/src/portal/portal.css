@@ -20,26 +20,17 @@
 .property-health { text-align:right; min-width:140px; }
 .property-health strong { display:block; font-size:31px; margin:4px 0; color:#e6c27a; }
 .property-health small { color:#cbd6cf; font-size:11px; }
+.audit-complete-banner { width:min(1160px,calc(100% - 40px)); margin:16px auto 0; padding:16px 20px; border:1px solid #cddbcf; background:#edf5ed; border-radius:16px; display:flex; align-items:center; gap:12px; color:#365b43; }
+.audit-complete-banner svg { flex:none; }.audit-complete-banner div{display:flex;flex-direction:column;gap:3px;flex:1}.audit-complete-banner b{font-size:13px}.audit-complete-banner span{font-size:11px;color:#64766a}.audit-complete-banner button{background:none;color:#365b43;font-weight:800;font-size:11px;white-space:nowrap}
 .portal-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
 .portal-card { background:#fff; border:1px solid #e1e3de; border-radius:20px; padding:27px; min-height:260px; }
 .portal-card h3 { font-family:'Playfair Display',Georgia,serif; font-size:29px; margin:8px 0 12px; }
 .portal-card > p { color:#68776e; line-height:1.65; font-size:14px; }
-.card-top { display:flex; justify-content:space-between; gap:20px; }
-.card-top svg { color:#7b6341; }
+.card-top { display:flex; justify-content:space-between; gap:20px; }.card-top svg { color:#7b6341; }
 .plan-meta { display:grid; grid-template-columns:1fr auto; gap:13px 20px; border-top:1px solid #e4e6e1; margin-top:24px; padding-top:17px; font-size:12px; }
-.plan-meta span { color:#718078; display:flex; align-items:center; gap:6px; }
-.plan-meta b { font-weight:600; }
-.task-list,.activity-list { display:flex; flex-direction:column; }
-.task,.activity { display:flex; align-items:center; justify-content:space-between; gap:15px; padding:14px 0; border-top:1px solid #e7e8e4; }
-.task b,.activity b { display:block; font-size:13px; }
-.task small,.activity small { display:block; color:#839087; margin-top:4px; font-size:11px; }
-.priority { font-size:9px; font-weight:700; letter-spacing:.08em; padding:5px 8px; border-radius:999px; background:#eeeae1; color:#6f6659; }
-.priority.high,.priority.urgent { background:#f1e3d9; color:#8b5239; }
-.empty-state { min-height:145px; border:1px dashed #d6dad3; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#8a968f; text-align:center; }
-.empty-state p { margin:8px 0; font-size:13px; }
-.empty-state button { background:none; color:#7b6341; font-weight:700; font-size:12px; }
-.activity { justify-content:flex-start; }
-.activity svg { color:#7b8e80; flex:none; }
-.portal-note { width:min(1160px,calc(100% - 40px)); margin:18px auto 0; padding:15px 18px; border-radius:12px; background:#e9ece7; color:#66756d; font-size:11px; line-height:1.6; }
-.portal-loading { min-height:100vh; display:grid; place-items:center; color:#68776e; background:#f4f3ee; }
-@media(max-width:720px){.portal-header{padding:0 15px}.portal-role{display:none}.portal-intro,.property-overview{width:min(100% - 28px,1160px)}.portal-grid{width:min(100% - 28px,1160px);grid-template-columns:1fr}.portal-intro{display:block;padding:42px 0 28px}.portal-primary{margin-top:22px}.property-overview{align-items:flex-start;flex-direction:column}.property-health{text-align:left}.portal-card{min-height:auto}}
+.plan-meta span { color:#718078; display:flex; align-items:center; gap:6px; }.plan-meta b { font-weight:600; }
+.task-list,.activity-list { display:flex; flex-direction:column; }.task,.activity { display:flex; align-items:center; justify-content:space-between; gap:15px; padding:14px 0; border-top:1px solid #e7e8e4; }.task b,.activity b { display:block; font-size:13px; }.task small,.activity small { display:block; color:#839087; margin-top:4px; font-size:11px; }
+.priority { font-size:9px; font-weight:700; letter-spacing:.08em; padding:5px 8px; border-radius:999px; background:#eeeae1; color:#6f6659; }.priority.high,.priority.urgent { background:#f1e3d9; color:#8b5239; }
+.empty-state { min-height:145px; border:1px dashed #d6dad3; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#8a968f; text-align:center; }.empty-state p { margin:8px 0; font-size:13px; }.empty-state button { background:none; color:#7b6341; font-weight:700; font-size:12px; }
+.activity { justify-content:flex-start; }.activity svg { color:#7b8e80; flex:none; }.portal-note { width:min(1160px,calc(100% - 40px)); margin:18px auto 0; padding:15px 18px; border-radius:12px; background:#e9ece7; color:#66756d; font-size:11px; line-height:1.6; }.portal-loading { min-height:100vh; display:grid; place-items:center; color:#68776e; background:#f4f3ee; }
+@media(max-width:720px){.portal-header{padding:0 15px}.portal-role{display:none}.portal-intro,.property-overview,.audit-complete-banner{width:min(100% - 28px,1160px)}.portal-grid{width:min(100% - 28px,1160px);grid-template-columns:1fr}.portal-intro{display:block;padding:42px 0 28px}.portal-primary{margin-top:22px}.property-overview{align-items:flex-start;flex-direction:column}.property-health{text-align:left}.portal-card{min-height:auto}.audit-complete-banner{align-items:flex-start;flex-wrap:wrap}.audit-complete-banner button{margin-left:32px}}
