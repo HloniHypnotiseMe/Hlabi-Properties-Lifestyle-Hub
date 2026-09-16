@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { ArrowRight, Home, KeyRound, Store, TrendingUp, UserRound, GraduationCap, ShieldCheck } from 'lucide-react';
+import HomeownerPortal from './portal/HomeownerPortal';
 
 const journeys = [
   { icon: Home, title: 'I own a home', text: 'Maintain, renew and plan the next five years of your property.', cta: 'Explore Home Renewal' },
@@ -11,12 +13,18 @@ const journeys = [
 ];
 
 export default function App() {
+  const [portalOpen, setPortalOpen] = useState(false);
+
+  if (portalOpen) {
+    return <HomeownerPortal userId="demo-homeowner" onSignOut={() => setPortalOpen(false)} />;
+  }
+
   return (
     <main>
       <nav className="nav shell">
         <div className="brand"><span className="brand-mark">H</span><span>HLABI <small>PROPERTIES</small></span></div>
         <div className="nav-links"><a href="#hub">Lifestyle Hub</a><a href="#renewal">Home Renewal</a><a href="#agents">Agents</a><a href="#academy">Academy</a></div>
-        <button className="nav-button">Sign in</button>
+        <button className="nav-button" onClick={() => setPortalOpen(true)}>Sign in</button>
       </nav>
 
       <section className="hero">
@@ -25,7 +33,7 @@ export default function App() {
             <p className="eyebrow">THE HLABI LIFESTYLE HUB</p>
             <h1>Your property.<br /><em>Your plans.<br />Your people.</em></h1>
             <p className="hero-copy">More than an estate agent. A connected property ecosystem for homeowners, buyers, sellers, investors, agents and trusted suppliers.</p>
-            <div className="hero-actions"><button className="primary">Enter the Lifestyle Hub <ArrowRight size={18} /></button><button className="secondary">I’m looking for a home</button></div>
+            <div className="hero-actions"><button className="primary" onClick={() => setPortalOpen(true)}>Enter the Lifestyle Hub <ArrowRight size={18} /></button><button className="secondary">I’m looking for a home</button></div>
             <div className="trust"><ShieldCheck size={18} /> Built around verified people, practical property services and long-term ownership.</div>
           </div>
           <div className="hero-card" id="renewal">
@@ -33,18 +41,18 @@ export default function App() {
             <h2>Home Renewal Plan™</h2>
             <p>Turn maintenance from an afterthought into a five-year property plan.</p>
             <div className="renewal-line"><span>Inspect</span><span>Renew</span><span>Maintain</span><span>Repeat</span></div>
-            <button className="card-link">Discover the plan <ArrowRight size={16} /></button>
+            <button className="card-link" onClick={() => setPortalOpen(true)}>Discover the plan <ArrowRight size={16} /></button>
           </div>
         </div>
       </section>
 
       <section className="hub shell" id="hub">
         <div className="section-head"><div><p className="eyebrow">ONE HUB, MANY JOURNEYS</p><h2>Where are you in your property journey?</h2></div><p>Choose your starting point. The Hub connects the services, people and tools around it.</p></div>
-        <div className="journey-grid">{journeys.map(({ icon: Icon, title, text, cta }) => <article className="journey" key={title}><Icon size={24} /><h3>{title}</h3><p>{text}</p><button>{cta} <ArrowRight size={15} /></button></article>)}</div>
+        <div className="journey-grid">{journeys.map(({ icon: Icon, title, text, cta }) => <article className="journey" key={title}><Icon size={24} /><h3>{title}</h3><p>{text}</p><button onClick={() => title === 'I own a home' && setPortalOpen(true)}>{cta} <ArrowRight size={15} /></button></article>)}</div>
       </section>
 
       <section className="renewal-band">
-        <div className="shell two-col"><div><p className="eyebrow">FOR HOMEOWNERS</p><h2>Own the next five years.</h2><p>Start with a digital home audit, identify what needs attention, connect with suitable suppliers and create a practical renewal plan.</p><button className="light-button">Start a home audit <ArrowRight size={17} /></button></div><div className="steps"><div><b>01</b><span>Assess your home</span></div><div><b>02</b><span>Plan maintenance & upgrades</span></div><div><b>03</b><span>Connect verified suppliers</span></div><div><b>04</b><span>Track the property journey</span></div></div></div>
+        <div className="shell two-col"><div><p className="eyebrow">FOR HOMEOWNERS</p><h2>Own the next five years.</h2><p>Start with a digital home audit, identify what needs attention, connect with suitable suppliers and create a practical renewal plan.</p><button className="light-button" onClick={() => setPortalOpen(true)}>Start a home audit <ArrowRight size={17} /></button></div><div className="steps"><div><b>01</b><span>Assess your home</span></div><div><b>02</b><span>Plan maintenance & upgrades</span></div><div><b>03</b><span>Connect verified suppliers</span></div><div><b>04</b><span>Track the property journey</span></div></div></div>
       </section>
 
       <section className="ecosystem shell" id="agents">
