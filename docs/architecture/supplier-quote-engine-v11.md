@@ -1,0 +1,1 @@
+Supplier quote API is a foundation, not a production marketplace launch. Production verification, terms, privacy, audit logging and operational controls remain required.
