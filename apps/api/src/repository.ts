@@ -4,6 +4,7 @@ export interface HomeownerRepository {
   getPropertyForOwner(propertyId: string, ownerId: string): Promise<PropertyRecord | null>;
   createAudit(input: Omit<AuditRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<AuditRecord>;
   getAuditForOwner(auditId: string, ownerId: string): Promise<AuditRecord | null>;
+  getLatestAuditForProperty(propertyId: string, ownerId: string): Promise<AuditRecord | null>;
 }
 
 /** Development-only in-memory adapter. Production uses PostgresHomeownerRepository when DATABASE_URL is configured. */
@@ -34,5 +35,11 @@ export class MemoryHomeownerRepository implements HomeownerRepository {
   async getAuditForOwner(auditId: string, ownerId: string) {
     const audit = this.audits.get(auditId);
     return audit?.ownerId === ownerId ? audit : null;
+  }
+
+  async getLatestAuditForProperty(propertyId: string, ownerId: string) {
+    return [...this.audits.values()]
+      .filter((audit) => audit.propertyId === propertyId && audit.ownerId === ownerId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
   }
 }
