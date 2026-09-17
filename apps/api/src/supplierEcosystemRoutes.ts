@@ -1,0 +1,13 @@
+import { z } from 'zod';
+import type { Express, RequestHandler } from 'express';
+import type { SupplierEcosystemRepository } from './supplierEcosystemRepository.js';
+import { isSupplierEligible, supplierEligibilityChecklist, supplierOnboardingStatuses } from './supplierEcosystemDomain.js';
+import type { SupplierRepository } from './supplierRepository.js';
+
+const updateSchema=z.object({status:z.enum(supplierOnboardingStatuses).optional(),businessProfileComplete:z.boolean().optional(),serviceAreasComplete:z.boolean().optional(),categoriesComplete:z.boolean().optional(),evidenceComplete:z.boolean().optional(),termsAccepted:z.boolean().optional(),reputationScore:z.number().min(0).max(5).optional(),completedJobs:z.number().int().min(0).optional()});
+
+export function registerSupplierEcosystemRoutes(app:Express,authenticated:RequestHandler,repo:SupplierEcosystemRepository,suppliers:SupplierRepository){
+  app.get('/api/v1/supplier/ecosystem',authenticated,async(_req,res)=>{const p=res.locals.principal;if(!p)return res.status(401).json({error:'AUTH_REQUIRED'});if(p.role!=='SUPPLIER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});let profile=await repo.get(p.userId);if(!profile)profile=await repo.create(p.userId);return res.json({profile,eligible:isSupplierEligible(profile),required:supplierEligibilityChecklist});});
+  app.patch('/api/v1/supplier/ecosystem',authenticated,async(req,res)=>{const p=res.locals.principal;if(!p)return res.status(401).json({error:'AUTH_REQUIRED'});if(p.role!=='SUPPLIER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const parsed=updateSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'INVALID_SUPPLIER_PROFILE',details:parsed.error.flatten()});let profile=await repo.get(p.userId);if(!profile)profile=await repo.create(p.userId);if(parsed.data.status==='VERIFIED'&&!supplierEligibilityChecklist.every(k=>(parsed.data as any)[k]??profile[k]))return res.status(409).json({error:'SUPPLIER_ELIGIBILITY_INCOMPLETE',required:supplierEligibilityChecklist});profile=await repo.update(p.userId,parsed.data);return res.json({profile,eligible:profile?isSupplierEligible(profile):false});});
+  app.get('/api/v1/supplier/opportunities',authenticated,async(_req,res)=>{const p=res.locals.principal;if(!p)return res.status(401).json({error:'AUTH_REQUIRED'});if(p.role!=='SUPPLIER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const profile=await repo.get(p.userId);if(!profile||!isSupplierEligible(profile))return res.status(403).json({error:'SUPPLIER_NOT_ELIGIBLE'});return res.json(await suppliers.listEligibleSuppliers());});
+}
