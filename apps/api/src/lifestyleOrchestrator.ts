@@ -9,16 +9,16 @@ export type AdvisorSource = 'PROPERTY'|'HOME_PASSPORT'|'AUDIT'|'SUPPLIER'|'QUOTE
 export interface AdvisorAction { id:string; type:'REVIEW_AUDIT'|'REQUEST_QUOTES'|'REVIEW_QUOTES'|'FOLLOW_JOB'|'UPDATE_PASSPORT'|'CONTACT_SUPPLIER'|'REVIEW_RENEWAL'; title:string; rationale:string; sources:AdvisorSource[]; requiresConfirmation:boolean; linkedIds:string[]; }
 export interface AdvisorSnapshot { property:any; passport:any|null; latestAudit:any|null; renewalPlan:any|null; renewalTasks:any[]; eligibleSupplierCount:number; quoteRequests:any[]; jobs:any[]; actions:AdvisorAction[]; aiSummary?:string; ai:{enabled:boolean;provider?:string;model?:string}; }
 
-export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:string;repository:HomeownerRepository;passportRepository:HomePassportRepository;supplierRepository:SupplierRepository;jobRepository:JobRepository;renewalRepository:RenewalRepository;aiProvider?:AiProviderAdapter;aiModel?:string;}):Promise<AdvisorSnapshot|null>{
+export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:string;repository:HomeownerRepository;passportRepository:HomePassportRepository;supplierRepository:SupplierRepository;jobRepository:JobRepository;renewalRepository?:RenewalRepository;aiProvider?:AiProviderAdapter;aiModel?:string;}):Promise<AdvisorSnapshot|null>{
   const property=await input.repository.getPropertyForOwner(input.propertyId,input.ownerId); if(!property)return null;
-  const renewalPlan=await input.renewalRepository.getPlanForOwner(property.id,input.ownerId);
+  const renewalPlan=input.renewalRepository?await input.renewalRepository.getPlanForOwner(property.id,input.ownerId):null;
   const [passport,latestAudit,eligibleSuppliers,quoteRequests,jobs,renewalTasks]=await Promise.all([
     input.passportRepository.getForOwner(property.id,input.ownerId),
     input.repository.getLatestAuditForProperty(property.id,input.ownerId),
     input.supplierRepository.listEligibleSuppliers(),
     input.supplierRepository.listQuoteRequestsForOwner(input.ownerId,property.id),
     input.jobRepository.listJobsForOwner(input.ownerId,property.id),
-    renewalPlan?input.renewalRepository.listTasksForOwner(renewalPlan.id,input.ownerId):Promise.resolve([]),
+    renewalPlan&&input.renewalRepository?input.renewalRepository.listTasksForOwner(renewalPlan.id,input.ownerId):Promise.resolve([]),
   ]);
   const actions:AdvisorAction[]=[];
   if(!latestAudit) actions.push({id:'audit',type:'REVIEW_AUDIT',title:'Complete a home audit',rationale:'There is no completed property audit available to identify priorities.',sources:['PROPERTY','SYSTEM'],requiresConfirmation:false,linkedIds:[property.id]});
