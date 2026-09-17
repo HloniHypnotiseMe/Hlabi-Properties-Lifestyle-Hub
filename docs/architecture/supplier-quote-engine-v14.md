@@ -1,0 +1,1 @@
+This stage does not activate external supplier providers or payment flows.
