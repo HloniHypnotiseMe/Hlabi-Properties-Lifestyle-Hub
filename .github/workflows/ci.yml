@@ -20,7 +20,7 @@ jobs:
       - run: npm install
       - run: npm run build
 
-  api-build:
+  api-build-and-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,3 +32,4 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npm run build
+      - run: npm test
