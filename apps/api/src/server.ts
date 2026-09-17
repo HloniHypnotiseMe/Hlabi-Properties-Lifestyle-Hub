@@ -48,6 +48,16 @@ app.post('/api/v1/homeowner/audits', homeownerAuth, async (req, res) => {
   return res.status(201).json(audit);
 });
 
+app.get('/api/v1/homeowner/properties/:propertyId/audits/latest', homeownerAuth, async (req, res) => {
+  const principal = authenticatedPrincipal(res);
+  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
+  const property = await repository.getPropertyForOwner(req.params.propertyId, principal.userId);
+  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
+  const audit = await repository.getLatestAuditForProperty(property.id, principal.userId);
+  if (!audit) return res.status(404).json({ error: 'AUDIT_NOT_FOUND' });
+  return res.json(audit);
+});
+
 app.get('/api/v1/homeowner/audits/:auditId', homeownerAuth, async (req, res) => {
   const principal = authenticatedPrincipal(res);
   if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });

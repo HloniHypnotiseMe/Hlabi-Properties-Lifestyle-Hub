@@ -44,11 +44,25 @@ export class PostgresHomeownerRepository implements HomeownerRepository {
               f.area, f.grade, f.description, f.priority, f.recommended_action, f.verified
        FROM audits a LEFT JOIN audit_findings f ON f.audit_id = a.id
        WHERE a.id = $1 AND a.owner_id = $2 ORDER BY f.area`, [auditId, ownerId]);
-    if (!result.rows.length) return null;
-    const first = result.rows[0];
+    return this.mapAuditRows(result.rows);
+  }
+
+  async getLatestAuditForProperty(propertyId: string, ownerId: string): Promise<AuditRecord | null> {
+    const result = await this.pool.query(
+      `SELECT a.id, a.property_id, a.owner_id, a.status, a.created_at, a.updated_at,
+              f.area, f.grade, f.description, f.priority, f.recommended_action, f.verified
+       FROM audits a LEFT JOIN audit_findings f ON f.audit_id = a.id
+       WHERE a.property_id = $1 AND a.owner_id = $2
+       ORDER BY a.created_at DESC, f.area`, [propertyId, ownerId]);
+    return this.mapAuditRows(result.rows);
+  }
+
+  private mapAuditRows(rows: any[]): AuditRecord | null {
+    if (!rows.length) return null;
+    const first = rows[0];
     return { id: first.id, propertyId: first.property_id, ownerId: first.owner_id, status: first.status,
       createdAt: first.created_at.toISOString(), updatedAt: first.updated_at.toISOString(),
-      findings: result.rows.filter((row) => row.area).map((row) => ({ area: row.area, grade: row.grade,
+      findings: rows.filter((row) => row.area).map((row) => ({ area: row.area, grade: row.grade,
         description: row.description ?? undefined, priority: row.priority,
         recommendedAction: row.recommended_action, verified: row.verified })) };
   }
