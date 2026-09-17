@@ -1,0 +1,1 @@
+Supplier marketplace logic remains behind provider-neutral repository adapters.

@@ -6,12 +6,14 @@ import { MemoryHomeownerRepository } from './repository.js';
 import { PostgresHomeownerRepository } from './postgresRepository.js';
 import { authenticatedPrincipal, DevelopmentAuthenticationProvider, UnconfiguredAuthenticationProvider, requireAuthentication } from './authentication.js';
 import { integrationHealth } from './integrations/health.js';
+import { MemorySupplierRepository, PostgresSupplierRepository } from './supplierRepository.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
 const usePostgres = Boolean(process.env.DATABASE_URL);
 const pool = usePostgres ? new Pool({ connectionString: process.env.DATABASE_URL }) : null;
 const repository = pool ? new PostgresHomeownerRepository(pool) : new MemoryHomeownerRepository();
+const supplierRepository = pool ? new PostgresSupplierRepository(pool) : new MemorySupplierRepository();
 const authProvider = process.env.AUTH_MODE === 'development'
   ? new DevelopmentAuthenticationProvider()
   : new UnconfiguredAuthenticationProvider();
@@ -27,6 +29,18 @@ const auditSchema = z.object({
     area: z.enum(auditAreas), grade: z.enum(conditionGrades), description: z.string().max(1000).optional(),
     priority: z.enum(['LOW', 'MEDIUM', 'URGENT']), recommendedAction: z.string().max(1000), verified: z.boolean().default(false),
   })).length(auditAreas.length),
+});
+
+const quoteRequestSchema = z.object({
+  propertyId: z.string().min(1), auditId: z.string().min(1).optional(), area: z.string().max(100).optional(),
+  title: z.string().min(3).max(160), description: z.string().min(10).max(3000),
+  priority: z.enum(['LOW', 'MEDIUM', 'URGENT']), category: z.string().max(80).optional(),
+});
+
+const supplierQuoteSchema = z.object({
+  quoteRequestId: z.string().min(1), supplierId: z.string().min(1), amountCents: z.number().int().positive().optional(),
+  currency: z.string().length(3).default('ZAR'), details: z.record(z.unknown()).default({}),
+  validUntil: z.string().datetime().optional(),
 });
 
 app.get('/api/v1/homeowner/properties/:propertyId', homeownerAuth, async (req, res) => {
@@ -64,6 +78,54 @@ app.get('/api/v1/homeowner/audits/:auditId', homeownerAuth, async (req, res) => 
   const audit = await repository.getAuditForOwner(req.params.auditId, principal.userId);
   if (!audit) return res.status(404).json({ error: 'AUDIT_NOT_FOUND' });
   return res.json(audit);
+});
+
+app.get('/api/v1/homeowner/properties/:propertyId/suppliers', homeownerAuth, async (req, res) => {
+  const principal = authenticatedPrincipal(res);
+  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
+  const property = await repository.getPropertyForOwner(req.params.propertyId, principal.userId);
+  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
+  const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+  return res.json(await supplierRepository.listEligibleSuppliers(category));
+});
+
+app.post('/api/v1/homeowner/quote-requests', homeownerAuth, async (req, res) => {
+  const parsed = quoteRequestSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'INVALID_QUOTE_REQUEST', details: parsed.error.flatten() });
+  const principal = authenticatedPrincipal(res);
+  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
+  const property = await repository.getPropertyForOwner(parsed.data.propertyId, principal.userId);
+  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
+  const suppliers = await supplierRepository.listEligibleSuppliers(parsed.data.category);
+  const request = await supplierRepository.createQuoteRequest({
+    propertyId: property.id, ownerId: principal.userId, auditId: parsed.data.auditId, area: parsed.data.area,
+    title: parsed.data.title, description: parsed.data.description, priority: parsed.data.priority,
+    status: 'OPEN', supplierIds: suppliers.map((s) => s.id),
+  });
+  return res.status(201).json(request);
+});
+
+app.get('/api/v1/homeowner/properties/:propertyId/quote-requests', homeownerAuth, async (req, res) => {
+  const principal = authenticatedPrincipal(res);
+  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
+  const property = await repository.getPropertyForOwner(req.params.propertyId, principal.userId);
+  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
+  return res.json(await supplierRepository.listQuoteRequestsForOwner(principal.userId, property.id));
+});
+
+app.get('/api/v1/homeowner/quote-requests/:requestId/quotes', homeownerAuth, async (req, res) => {
+  const principal = authenticatedPrincipal(res);
+  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
+  return res.json(await supplierRepository.listQuotesForOwnerRequest(req.params.requestId, principal.userId));
+});
+
+app.post('/api/v1/supplier/quotes', homeownerAuth, async (req, res) => {
+  const parsed = supplierQuoteSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'INVALID_QUOTE', details: parsed.error.flatten() });
+  const principal = authenticatedPrincipal(res);
+  if (principal.role !== 'SUPPLIER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
+  const quote = await supplierRepository.submitQuote({ ...parsed.data, status: 'SUBMITTED', submittedAt: new Date().toISOString() });
+  return res.status(201).json(quote);
 });
 
 app.listen(port, () => console.log(`Hlabi API listening on ${port}`));

@@ -1,0 +1,1 @@
+No external supplier, payment, messaging or insurance credentials are introduced by this stage.
