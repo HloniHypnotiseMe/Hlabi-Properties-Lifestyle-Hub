@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ACADEMY_LESSONS } from '../src/academyLessonDomain.js';
 import { ACADEMY_READINESS_EXAM_QUESTIONS, READINESS_EXAM_MAX_SCORE, publicReadinessExamQuestion } from '../src/academyReadinessExamQuestionBank.js';
-import { ACADEMY_READINESS_EXAM_DURATION_MINUTES, ACADEMY_READINESS_EXAM_PASSING_SCORE } from '../src/academyReadinessExam.js';
+import { ACADEMY_READINESS_EXAM } from '../src/academyReadinessExam.js';
 
 const expectedAssessmentIds = [
   'module-0-knowledge',
@@ -37,6 +37,6 @@ test('Public readiness questions never expose answer keys', () => {
 });
 
 test('Readiness exam policy is 180 minutes with a 70 percent pass mark', () => {
-  assert.equal(ACADEMY_READINESS_EXAM_DURATION_MINUTES, 180);
-  assert.equal(ACADEMY_READINESS_EXAM_PASSING_SCORE, 70);
+  assert.equal(ACADEMY_READINESS_EXAM.durationMinutes, 180);
+  assert.equal(ACADEMY_READINESS_EXAM.passingScore, 70);
 });
