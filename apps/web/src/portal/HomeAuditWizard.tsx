@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, Home, ShieldCheck, Wrench } from 'lucide-react';
 import type { AuditArea, ConditionGrade, HomeAuditFinding, Priority } from '../domain/property';
+import { createHomeAudit } from '../api/homeownerApi';
 import './audit.css';
 
 interface HomeAuditWizardProps {
+  propertyId: string;
   propertyName: string;
+  userId: string;
   onComplete: (findings: HomeAuditFinding[]) => void;
   onCancel: () => void;
 }
@@ -66,16 +69,21 @@ const areas: AreaQuestion[] = [
 
 const gradeWeight: Record<ConditionGrade, number> = { GREEN: 100, AMBER: 65, RED: 30 };
 
-export default function HomeAuditWizard({ propertyName, onComplete, onCancel }: HomeAuditWizardProps) {
+export default function HomeAuditWizard({ propertyId, propertyName, userId, onComplete, onCancel }: HomeAuditWizardProps) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<AuditArea, ConditionGrade>>({} as Record<AuditArea, ConditionGrade>);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const current = areas[step];
   const answered = Object.keys(answers).length;
   const score = useMemo(() => answered ? Math.round(Object.values(answers).reduce((sum, grade) => sum + gradeWeight[grade], 0) / answered) : 0, [answers, answered]);
 
-  const select = (grade: ConditionGrade) => setAnswers((previous) => ({ ...previous, [current.area]: grade }));
+  const select = (grade: ConditionGrade) => {
+    setSaveError(null);
+    setAnswers((previous) => ({ ...previous, [current.area]: grade }));
+  };
 
-  const finish = () => {
+  const finish = async () => {
     const findings: HomeAuditFinding[] = areas.map((area, index) => {
       const grade = answers[area.area] ?? 'AMBER';
       const priority: Priority = grade === 'RED' ? 'URGENT' : grade === 'AMBER' ? 'MEDIUM' : 'LOW';
@@ -90,13 +98,23 @@ export default function HomeAuditWizard({ propertyName, onComplete, onCancel }: 
         verified: false,
       };
     });
-    onComplete(findings);
+
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await createHomeAudit(propertyId, findings, userId);
+      onComplete(findings);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'We could not save the audit. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <main className="audit-shell">
       <header className="audit-header">
-        <button className="audit-back" onClick={onCancel}><ArrowLeft size={16} /> Back to property hub</button>
+        <button className="audit-back" onClick={onCancel} disabled={saving}><ArrowLeft size={16} /> Back to property hub</button>
         <div className="audit-brand"><span className="audit-mark">H</span><span>HLABI <small>HOME AUDIT</small></span></div>
         <span className="audit-progress">{step + 1} / {areas.length}</span>
       </header>
@@ -111,7 +129,7 @@ export default function HomeAuditWizard({ propertyName, onComplete, onCancel }: 
 
         <div className="audit-options">
           {current.options.map((option) => (
-            <button key={option.grade} className={`audit-option ${answers[current.area] === option.grade ? 'selected' : ''}`} onClick={() => select(option.grade)}>
+            <button key={option.grade} className={`audit-option ${answers[current.area] === option.grade ? 'selected' : ''}`} onClick={() => select(option.grade)} disabled={saving}>
               <span className={`audit-dot ${option.grade.toLowerCase()}`} />
               <span><strong>{option.label}</strong><small>{option.description}</small></span>
               {answers[current.area] === option.grade && <CheckCircle2 size={20} />}
@@ -120,10 +138,11 @@ export default function HomeAuditWizard({ propertyName, onComplete, onCancel }: 
         </div>
 
         <div className="audit-note"><ShieldCheck size={18} /><span>This is a preliminary homeowner self-assessment. It does not replace a professional inspection, compliance assessment or insurance underwriting decision.</span></div>
+        {saveError && <div className="audit-note"><Wrench size={18} /><span>Could not save your audit: {saveError}. Check the connection and try again.</span></div>}
 
         <footer className="audit-footer">
           <span><Home size={16} /> {answered} of {areas.length} areas assessed</span>
-          {step < areas.length - 1 ? <button className="audit-next" disabled={!answers[current.area]} onClick={() => setStep((value) => value + 1)}>Next area <ArrowRight size={17} /></button> : <button className="audit-next" disabled={answered !== areas.length} onClick={finish}>Complete audit <Wrench size={17} /></button>}
+          {step < areas.length - 1 ? <button className="audit-next" disabled={!answers[current.area] || saving} onClick={() => setStep((value) => value + 1)}>Next area <ArrowRight size={17} /></button> : <button className="audit-next" disabled={answered !== areas.length || saving} onClick={() => void finish}>{saving ? 'Saving audit…' : 'Complete audit'} <Wrench size={17} /></button>}
         </footer>
       </section>
 
