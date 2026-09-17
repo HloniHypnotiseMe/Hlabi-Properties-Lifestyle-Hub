@@ -42,9 +42,10 @@ CREATE TABLE IF NOT EXISTS academy_lesson_activities (
   asset_id TEXT NOT NULL,
   asset_kind TEXT NOT NULL,
   event_type TEXT NOT NULL CHECK (event_type IN ('STARTED','COMPLETED')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(enrollment_id, asset_id, event_type)
 );
-CREATE INDEX IF NOT EXISTS academy_lesson_activities_enrollment_idx ON academy_lesson_activities(enrollment_id, module_index, created_at);
+CREATE INDEX IF NOT EXISTS academy_lesson_activities_enrollment_idx ON academy_lesson_activities(enrollment_id, module_index, occurred_at);
 
 CREATE TABLE IF NOT EXISTS academy_readiness_exam_attempts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
