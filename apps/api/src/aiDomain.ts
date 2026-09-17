@@ -10,7 +10,8 @@ export type AgentPermission =
   | 'QUEUE_MESSAGE'
   | 'CREATE_TASK'
   | 'CREATE_QUOTE_REQUEST'
-  | 'SCHEDULE_JOB';
+  | 'SCHEDULE_JOB'
+  | 'SETTLE_JOB';
 
 export interface AiGenerationRequest {
   provider: AiProvider;
