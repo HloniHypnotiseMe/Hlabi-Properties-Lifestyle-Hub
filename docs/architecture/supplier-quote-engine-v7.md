@@ -1,0 +1,1 @@
+This branch is intentionally backend-first; homeowner quote comparison UI will be added after the API workflow is merged.
