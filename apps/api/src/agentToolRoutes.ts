@@ -9,16 +9,18 @@ import type { SupplierRepository } from './supplierRepository.js';
 import type { JobRepository } from './jobRepository.js';
 import type { MessagingRepository } from './messagingRepository.js';
 import type { AgentPropertyAccessRepository } from './agentPropertyAccessRepository.js';
+import type { BillingRepository } from './billingRepository.js';
+import type { PaymentProvider } from './billingDomain.js';
 import { authenticatedPrincipal } from './authentication.js';
 
 const toolSchema = z.object({
-  tool:z.enum(['property.read','audit.read','quotes.read','jobs.read','message.draft','message.queue','task.create','quote-request.create','job.schedule']),
+  tool:z.enum(['property.read','audit.read','quotes.read','jobs.read','message.draft','message.queue','task.create','quote-request.create','job.schedule','job.settle']),
   agentId:z.string().min(1), propertyId:z.string().min(1).optional(), arguments:z.record(z.unknown()).default({}), taskId:z.string().min(1).optional(), idempotencyKey:z.string().min(1).max(200).optional(),
 });
 const approveSchema = z.object({ action:z.literal('approve') });
 
-export function registerAgentToolRoutes(app:Express, authenticated:RequestHandler, agentRepository:AgentRepository, homeownerRepository:HomeownerRepository, supplierRepository:SupplierRepository, jobRepository:JobRepository, messagingRepository:MessagingRepository, propertyAccessRepository:AgentPropertyAccessRepository) {
-  const service = new AgentToolExecutionService(homeownerRepository,supplierRepository,jobRepository,messagingRepository,agentRepository,propertyAccessRepository);
+export function registerAgentToolRoutes(app:Express, authenticated:RequestHandler, agentRepository:AgentRepository, homeownerRepository:HomeownerRepository, supplierRepository:SupplierRepository, jobRepository:JobRepository, messagingRepository:MessagingRepository, propertyAccessRepository:AgentPropertyAccessRepository,billingRepository:BillingRepository,paymentProvider:PaymentProvider) {
+  const service = new AgentToolExecutionService(homeownerRepository,supplierRepository,jobRepository,messagingRepository,agentRepository,propertyAccessRepository,billingRepository,paymentProvider);
   app.post('/api/v1/agent-ai/tools/execute',authenticated,async(req,res)=>{
     const principal=authenticatedPrincipal(res); if(principal.role!=='AGENT')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});
     const parsed=toolSchema.safeParse(req.body); if(!parsed.success)return res.status(400).json({error:'INVALID_TOOL_REQUEST',details:parsed.error.flatten()});
