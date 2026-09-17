@@ -1,0 +1,151 @@
+# Hlabi Properties Lifestyle Hub — TODO Tracker
+
+**Last updated:** 2026-09-17
+
+This is the living execution tracker. `DONE` means the capability is represented in the repository; `NEXT` means the next implementation block; `HARDEN` means built but still requiring production validation, testing, assets or operational work.
+
+## 1. Product foundation
+
+- [x] `DONE` Public Lifestyle Hub / ecosystem navigation
+- [x] `DONE` Homeowner portal and property ownership foundation
+- [x] `DONE` Digital home audit
+- [x] `DONE` Five-year Home Renewal workflow foundation
+- [x] `DONE` Supplier quote/job/evidence foundation
+- [x] `DONE` Reputation layer
+- [x] `DONE` Buyer / seller / investor journey persistence foundation
+
+## 2. Supplier ecosystem
+
+- [x] `DONE` Supplier onboarding/readiness
+- [x] `DONE` Eligibility and verification states
+- [x] `DONE` Supplier opportunity feed
+- [x] `DONE` Quote lifecycle foundation
+- [x] `DONE` Job lifecycle foundation
+- [x] `DONE` Completion evidence foundation
+- [x] `DONE` Supplier reputation foundation
+- [ ] `HARDEN` End-to-end supplier/customer workflow tests
+- [ ] `HARDEN` Supplier verification operations/admin controls
+- [ ] `NEXT` Quote comparison → selection → booking → payment/settlement hardening
+
+## 3. Home Passport
+
+- [x] `DONE` Property lifecycle passport domain
+- [x] `DONE` Memory + PostgreSQL persistence
+- [x] `DONE` Owner-scoped API
+- [x] `DONE` Lifestyle Hub dashboard/navigation
+- [ ] `NEXT` Connect passport to audits, renewal plans, jobs, suppliers, documents and reputation as live linked records
+- [ ] `HARDEN` Document/warranty storage and retrieval controls
+- [ ] `HARDEN` POPIA retention, consent and deletion policy implementation
+
+## 4. Academy
+
+- [x] `DONE` Six-module Foundation curriculum
+- [x] `DONE` Sequential lesson locking
+- [x] `DONE` Required-content server gate
+- [x] `DONE` Assessment engine
+- [x] `DONE` Practical/simulation assessment + reviewer workflow
+- [x] `DONE` Evidence package + readiness diagnostic
+- [x] `DONE` Internal readiness examination architecture
+- [x] `DONE` PostgreSQL persistence parity
+- [x] `DONE` Academy gamification
+- [x] `DONE` Academy AI Tutor boundary
+- [ ] `HARDEN` Full automated Academy validation/build verification
+- [ ] `HARDEN` Expand and validate production question bank against the current regulatory competency framework
+- [ ] `NEXT` Real lesson video/audio assets
+- [ ] `NEXT` Full readiness/evidence portfolio UX
+
+## 5. Franchise Accelerator
+
+- [x] `DONE` Academy → Agent → Office → Franchise state machine
+- [x] `DONE` Readiness checklist
+- [x] `DONE` PostgreSQL persistence
+- [x] `DONE` Server-authoritative progression
+- [x] `DONE` Lifestyle Hub dashboard
+- [ ] `HARDEN` Office/territory commercial workflow
+- [ ] `HARDEN` Legally reviewed franchise documentation and launch controls
+- [ ] `NEXT` Academy → agent → office operational pipeline refinement
+
+## 6. AI orchestration — CURRENT BUILD BLOCK
+
+Existing AI foundations include a provider-neutral boundary, Ollama adapter, agent task orchestration, permission-based tools and approval-gated outputs. citeturn460file0
+
+- [ ] `NEXT` Trusted-advisor context assembler
+  - Home Passport
+  - property/audit state
+  - renewal plan
+  - supplier eligibility
+  - quotes
+  - jobs/evidence
+  - reputation
+  - Academy/agent context where authorised
+- [ ] `NEXT` Context-aware recommendation engine
+- [ ] `NEXT` Tool execution registry with explicit permissions
+- [ ] `NEXT` Approval workflow for quote requests, messages and scheduling
+- [ ] `NEXT` Idempotency + audit events for every external action
+- [ ] `NEXT` AI task/result history visible to authorised users
+- [ ] `HARDEN` Provider health/failure/retry policy
+- [ ] `HARDEN` Tenant/property data isolation tests
+
+## 7. Buyer / seller / investor expansion
+
+- [ ] `NEXT` Buyer discovery + affordability intake
+- [ ] `NEXT` Seller preparation → listing → lead/viewing journey
+- [ ] `NEXT` Investor portfolio/property intelligence workflow
+- [ ] `NEXT` Transaction support journey linking agent + property + documents
+
+## 8. Media + experience
+
+- [ ] `NEXT` Production Academy video assets
+- [ ] `NEXT` Production Academy audio assets
+- [ ] `NEXT` AI Tutor integrated directly into competency lessons
+- [ ] `HARDEN` Mobile/responsive UX pass
+- [ ] `HARDEN` Accessibility pass
+
+## 9. Integrations / commercial infrastructure
+
+- [ ] `NEXT` Payment/settlement sandbox for supplier jobs
+- [ ] `NEXT` Messaging provider sandbox + delivery events
+- [ ] `NEXT` Document storage provider boundary
+- [ ] `NEXT` Scheduling provider boundary
+- [ ] `NEXT` Notification preferences
+- [ ] `HARDEN` Provider webhook verification, retries, monitoring and rollback
+
+The repository already defines provider-neutral activation controls and requires sandbox testing, credentials, webhook verification, monitoring and rollback before production activation. citeturn458file0
+
+## 10. Production hardening
+
+- [ ] `BLOCKER` Run API build + automated test suite in a working CI environment and resolve failures
+- [ ] `BLOCKER` Verify web build
+- [ ] `BLOCKER` Verify migrations against a clean PostgreSQL database
+- [ ] `BLOCKER` Production authentication/identity provider
+- [ ] `BLOCKER` Authorization/integration security review
+- [ ] `HARDEN` Audit logging coverage
+- [ ] `HARDEN` Rate limits / abuse controls
+- [ ] `HARDEN` Error monitoring and alerting
+- [ ] `HARDEN` Backup/restore and disaster recovery
+- [ ] `HARDEN` POPIA data lifecycle controls
+
+## 11. Operating model
+
+- [ ] `NEXT` Supplier operations/admin console
+- [ ] `NEXT` Academy reviewer operations console hardening
+- [ ] `NEXT` Agent operating dashboard
+- [ ] `NEXT` Franchise/office operations dashboard
+- [ ] `NEXT` Customer support workflow
+- [ ] `NEXT` Analytics: acquisition → trust → solve → retain → expand → refer
+
+## Execution order
+
+**Current:** AI orchestration → trusted-advisor context → tool permissions/approval → linked Home Passport → supplier/job actions.
+
+**Then:** buyer/seller/investor expansion → media/experience → commercial integrations → production hardening.
+
+## Product test
+
+Every new item must answer:
+
+> **Does this materially improve the user's property/lifestyle journey?**
+
+The target operating loop remains:
+
+**Understand → Estimate → Compare → Choose → Book → Pay → Review → Repeat.**
