@@ -7,6 +7,7 @@ import type { JobRepository } from './jobRepository.js';
 import type { MessagingRepository } from './messagingRepository.js';
 import { queueNotification } from './messagingService.js';
 import type { MessageChannel } from './messagingDomain.js';
+import type { AgentPropertyAccessRepository } from './agentPropertyAccessRepository.js';
 
 export type AgentToolName = 'property.read' | 'audit.read' | 'quotes.read' | 'jobs.read' | 'message.draft' | 'message.queue' | 'task.create' | 'quote-request.create' | 'job.schedule';
 export interface AgentToolExecutionInput { tool: AgentToolName; agentId: string; propertyId?: string; arguments: Record<string, unknown>; taskId?: string; idempotencyKey?: string; }
@@ -15,21 +16,21 @@ const permissionByTool: Record<AgentToolName, AgentPermission> = {'property.read
 const consequentialTools = new Set<AgentToolName>(['message.queue','task.create','quote-request.create','job.schedule']);
 
 export class AgentToolExecutionService {
-  constructor(private readonly homeownerRepository: HomeownerRepository, private readonly supplierRepository: SupplierRepository, private readonly jobRepository: JobRepository, private readonly messagingRepository: MessagingRepository, private readonly agentRepository: AgentRepository) {}
+  constructor(private readonly homeownerRepository: HomeownerRepository, private readonly supplierRepository: SupplierRepository, private readonly jobRepository: JobRepository, private readonly messagingRepository: MessagingRepository, private readonly agentRepository: AgentRepository, private readonly propertyAccessRepository: AgentPropertyAccessRepository) {}
   async execute(ownerId: string, context: AgentToolContext, input: AgentToolExecutionInput): Promise<AgentToolExecutionResult> {
     const staff = await this.agentRepository.getStaffForOwner(input.agentId, ownerId); if (!staff || staff.status !== 'ACTIVE') throw new Error('AGENT_NOT_FOUND');
     requireToolPermission(context, permissionByTool[input.tool]);
+    const propertyId = input.propertyId ?? String(input.arguments.propertyId ?? ''); if (!propertyId) throw new Error('PROPERTY_SCOPE_REQUIRED');
+    const property = await this.homeownerRepository.getPropertyForOwner(propertyId, ownerId); if (!property) throw new Error('PROPERTY_ACCESS_DENIED');
+    const access = await this.propertyAccessRepository.getActive(input.agentId, ownerId, propertyId); if (!access) throw new Error('AGENT_PROPERTY_ACCESS_DENIED');
     const consequential = consequentialTools.has(input.tool);
     if (consequential) {
       if (!input.taskId) throw new Error('APPROVAL_TASK_REQUIRED');
-      const task = await this.agentRepository.getTaskForOwner(input.taskId, ownerId);
-      if (!task) throw new Error('APPROVAL_TASK_NOT_FOUND');
-      if (task.agentId !== input.agentId) throw new Error('AGENT_TASK_SCOPE_VIOLATION');
+      const task = await this.agentRepository.getTaskForOwner(input.taskId, ownerId); if (!task) throw new Error('APPROVAL_TASK_NOT_FOUND');
+      if (task.agentId !== input.agentId || task.propertyId !== propertyId) throw new Error('AGENT_TASK_SCOPE_VIOLATION');
       if (task.status !== 'WAITING_APPROVAL') throw new Error('APPROVAL_REQUIRED');
       if (!await this.agentRepository.hasApprovalGrant(task.id, ownerId)) throw new Error('HUMAN_APPROVAL_REQUIRED');
     }
-    const propertyId = input.propertyId ?? String(input.arguments.propertyId ?? ''); if (!propertyId) throw new Error('PROPERTY_SCOPE_REQUIRED');
-    const property = await this.homeownerRepository.getPropertyForOwner(propertyId, ownerId); if (!property) throw new Error('PROPERTY_ACCESS_DENIED');
     let result: Record<string, unknown>;
     switch (input.tool) {
       case 'property.read': result = { property }; break;
