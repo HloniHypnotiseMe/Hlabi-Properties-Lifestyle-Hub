@@ -1,0 +1,1 @@
+The implementation intentionally leaves production supplier onboarding, identity verification, service-area verification, quote selection and job execution for subsequent stages.
