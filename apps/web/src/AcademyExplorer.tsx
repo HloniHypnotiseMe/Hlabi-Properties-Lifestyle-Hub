@@ -1,0 +1,12 @@
+import { useState } from 'react';
+import { ArrowRight, BookOpen, CheckCircle2, GraduationCap, PlayCircle } from 'lucide-react';
+
+const modules = ['Property fundamentals','Buyer and seller journeys','Listing and marketing practice','Negotiation and client communication','Ethics, compliance and professional conduct','AI tools for property work'];
+
+export default function AcademyExplorer() {
+  const [started, setStarted] = useState(false);
+  const [completed, setCompleted] = useState<number[]>([]);
+  const toggle = (index: number) => setCompleted(current => current.includes(index) ? current : [...current, index]);
+  const progress = Math.round(completed.length / modules.length * 100);
+  return <section className="academy-panel" id="academy"><div className="academy-intro"><p className="eyebrow">HLABI ACADEMY</p><h2>Learn the work. Practise the work. Build the career.</h2><p>A structured learning foundation for people entering property, with practical modules, simulations and a clear path toward the relevant professional requirements.</p><button className="primary" onClick={() => setStarted(true)}>{started ? 'Continue learning' : 'Start Academy'} <ArrowRight size={18} /></button><small>This learning foundation does not itself confer a professional designation or replace any applicable qualification, registration or regulatory requirement.</small></div><div className="academy-card"><div className="academy-card-head"><div><GraduationCap size={24}/><span>PROPERTY PROFESSIONAL FOUNDATION</span></div><strong>{progress}%</strong></div><div className="academy-progress"><i style={{width:`${progress}%`}} /></div><div className="academy-modules">{modules.map((module,index)=>{const done=completed.includes(index);return <button key={module} className={done?'module done':'module'} onClick={()=>toggle(index)} disabled={!started}><span>{done?<CheckCircle2 size={18}/>:<PlayCircle size={18}/>}</span><div><b>0{index+1}</b><strong>{module}</strong></div><ArrowRight size={16}/></button>})}</div>{started&&progress===100&&<div className="academy-complete"><CheckCircle2 size={28}/><div><strong>Foundation completed</strong><span>Your completion can now be used as a foundation for the next qualification or career step, subject to the applicable requirements.</span></div></div>}</div><div className="academy-strip"><BookOpen size={20}/><span><b>Career pathway</b> Learn → practise → complete → pursue the applicable qualification/registration → gain experience → progress toward agent opportunities.</span></div></section>;
+}
