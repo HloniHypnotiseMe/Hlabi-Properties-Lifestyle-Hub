@@ -10,7 +10,7 @@ export interface Subscription {
 }
 
 export interface PaymentTransaction {
-  id:string; subscriptionId?:string; ownerId:string; propertyId?:string; provider:string;
+  id:string; subscriptionId?:string; ownerId:string; propertyId?:string; jobId?:string; provider:string;
   reference:string; providerTransactionRef?:string; amountMinor:number; currency:string;
   status:PaymentStatus; failureCode?:string; failureReason?:string; idempotencyKey:string;
   createdAt:string; updatedAt:string;
