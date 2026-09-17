@@ -5,6 +5,7 @@ export interface SupplierRepository {
   listEligibleSuppliers(category?: string): Promise<SupplierProfile[]>;
   createQuoteRequest(input: Omit<QuoteRequest, 'id' | 'createdAt' | 'updatedAt'>): Promise<QuoteRequest>;
   listQuoteRequestsForOwner(ownerId: string, propertyId?: string): Promise<QuoteRequest[]>;
+  listOpenQuoteRequestsForSupplier(supplierId: string): Promise<QuoteRequest[]>;
   submitQuote(input: Omit<SupplierQuote, 'id' | 'createdAt' | 'updatedAt'>): Promise<SupplierQuote>;
   listQuotesForOwnerRequest(requestId: string, ownerId: string): Promise<SupplierQuote[]>;
 }
@@ -13,107 +14,22 @@ export class MemorySupplierRepository implements SupplierRepository {
   private readonly suppliers = new Map<string, SupplierProfile>();
   private readonly requests = new Map<string, QuoteRequest>();
   private readonly quotes = new Map<string, SupplierQuote>();
-
-  constructor() {
-    this.suppliers.set('demo-supplier-1', {
-      id: 'demo-supplier-1', businessName: 'Hlabi Verified Plumbing', categories: ['plumbing'],
-      serviceAreas: ['Johannesburg'], verified: true, active: true,
-    });
-    this.suppliers.set('demo-supplier-2', {
-      id: 'demo-supplier-2', businessName: 'Hlabi Verified Electrical', categories: ['electrical'],
-      serviceAreas: ['Johannesburg'], verified: true, active: true,
-    });
-  }
-
-  async listEligibleSuppliers(category?: string) {
-    return [...this.suppliers.values()].filter((s) => s.active && s.verified && (!category || s.categories.includes(category)));
-  }
-
-  async createQuoteRequest(input: Omit<QuoteRequest, 'id' | 'createdAt' | 'updatedAt'>) {
-    const now = new Date().toISOString();
-    const request = { ...input, id: `quote-request-${crypto.randomUUID()}`, createdAt: now, updatedAt: now };
-    this.requests.set(request.id, request);
-    return request;
-  }
-
-  async listQuoteRequestsForOwner(ownerId: string, propertyId?: string) {
-    return [...this.requests.values()].filter((r) => r.ownerId === ownerId && (!propertyId || r.propertyId === propertyId));
-  }
-
-  async submitQuote(input: Omit<SupplierQuote, 'id' | 'createdAt' | 'updatedAt'>) {
-    const now = new Date().toISOString();
-    const quote = { ...input, id: `quote-${crypto.randomUUID()}`, createdAt: now, updatedAt: now };
-    this.quotes.set(quote.id, quote);
-    return quote;
-  }
-
-  async listQuotesForOwnerRequest(requestId: string, ownerId: string) {
-    const request = this.requests.get(requestId);
-    if (!request || request.ownerId !== ownerId) return [];
-    return [...this.quotes.values()].filter((q) => q.quoteRequestId === requestId);
-  }
+  constructor() { this.suppliers.set('demo-supplier-1',{id:'demo-supplier-1',businessName:'Hlabi Verified Plumbing',categories:['plumbing'],serviceAreas:['Johannesburg'],verified:true,active:true}); this.suppliers.set('demo-supplier-2',{id:'demo-supplier-2',businessName:'Hlabi Verified Electrical',categories:['electrical'],serviceAreas:['Johannesburg'],verified:true,active:true}); }
+  async listEligibleSuppliers(category?:string){return [...this.suppliers.values()].filter(s=>s.active&&s.verified&&(!category||s.categories.includes(category)));}
+  async createQuoteRequest(input:Omit<QuoteRequest,'id'|'createdAt'|'updatedAt'>){const now=new Date().toISOString();const request={...input,id:`quote-request-${crypto.randomUUID()}`,createdAt:now,updatedAt:now};this.requests.set(request.id,request);return request;}
+  async listQuoteRequestsForOwner(ownerId:string,propertyId?:string){return [...this.requests.values()].filter(r=>r.ownerId===ownerId&&(!propertyId||r.propertyId===propertyId));}
+  async listOpenQuoteRequestsForSupplier(supplierId:string){return [...this.requests.values()].filter(r=>(r.status==='OPEN'||r.status==='QUOTING')&&r.supplierIds.includes(supplierId));}
+  async submitQuote(input:Omit<SupplierQuote,'id'|'createdAt'|'updatedAt'>){const now=new Date().toISOString();const quote={...input,id:`quote-${crypto.randomUUID()}`,createdAt:now,updatedAt:now};this.quotes.set(quote.id,quote);return quote;}
+  async listQuotesForOwnerRequest(requestId:string,ownerId:string){const request=this.requests.get(requestId);if(!request||request.ownerId!==ownerId)return [];return [...this.quotes.values()].filter(q=>q.quoteRequestId===requestId);}
 }
 
 export class PostgresSupplierRepository implements SupplierRepository {
-  constructor(private readonly pool: Pool) {}
-
-  async listEligibleSuppliers(category?: string): Promise<SupplierProfile[]> {
-    const result = await this.pool.query(
-      `SELECT id, business_name, categories, service_areas, verified, active FROM suppliers
-       WHERE active = true AND verified = true AND ($1::text IS NULL OR $1 = ANY(categories))
-       ORDER BY business_name`, [category ?? null]);
-    return result.rows.map((r) => ({ id: r.id, businessName: r.business_name, categories: r.categories,
-      serviceAreas: r.service_areas, verified: r.verified, active: r.active }));
-  }
-
-  async createQuoteRequest(input: Omit<QuoteRequest, 'id' | 'createdAt' | 'updatedAt'>): Promise<QuoteRequest> {
-    const client = await this.pool.connect();
-    try {
-      await client.query('BEGIN');
-      const result = await client.query(
-        `INSERT INTO quote_requests (property_id, owner_id, audit_id, area, title, description, priority, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-        [input.propertyId, input.ownerId, input.auditId ?? null, input.area ?? null, input.title, input.description, input.priority, input.status]);
-      for (const supplierId of input.supplierIds) {
-        await client.query('INSERT INTO quote_request_suppliers (quote_request_id, supplier_id) VALUES ($1,$2)', [result.rows[0].id, supplierId]);
-      }
-      await client.query('COMMIT');
-      return this.mapRequest(result.rows[0], input.supplierIds);
-    } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
-  }
-
-  async listQuoteRequestsForOwner(ownerId: string, propertyId?: string): Promise<QuoteRequest[]> {
-    const result = await this.pool.query(
-      `SELECT qr.*, COALESCE(array_agg(qrs.supplier_id) FILTER (WHERE qrs.supplier_id IS NOT NULL), '{}') supplier_ids
-       FROM quote_requests qr LEFT JOIN quote_request_suppliers qrs ON qrs.quote_request_id = qr.id
-       WHERE qr.owner_id = $1 AND ($2::uuid IS NULL OR qr.property_id = $2) GROUP BY qr.id ORDER BY qr.created_at DESC`,
-      [ownerId, propertyId ?? null]);
-    return result.rows.map((r) => this.mapRequest(r, r.supplier_ids));
-  }
-
-  async submitQuote(input: Omit<SupplierQuote, 'id' | 'createdAt' | 'updatedAt'>): Promise<SupplierQuote> {
-    const result = await this.pool.query(
-      `INSERT INTO supplier_quotes (property_id, owner_id, audit_id, supplier_id, quote_request_id, status, amount_cents, currency, details, valid_until, submitted_at)
-       SELECT property_id, owner_id, audit_id, $2, $1, $3, $4, $5, $6, $7, $8 FROM quote_requests WHERE id = $1
-       RETURNING id, created_at, updated_at`,
-      [input.quoteRequestId, input.supplierId, input.status, input.amountCents ?? null, input.currency, input.details,
-        input.validUntil ?? null, input.submittedAt ?? null]);
-    if (!result.rows[0]) throw new Error('QUOTE_REQUEST_NOT_FOUND');
-    return { ...input, id: result.rows[0].id, createdAt: result.rows[0].created_at.toISOString(), updatedAt: result.rows[0].updated_at.toISOString() };
-  }
-
-  async listQuotesForOwnerRequest(requestId: string, ownerId: string): Promise<SupplierQuote[]> {
-    const result = await this.pool.query(
-      `SELECT sq.* FROM supplier_quotes sq JOIN quote_requests qr ON qr.id = sq.quote_request_id
-       WHERE sq.quote_request_id = $1 AND qr.owner_id = $2 ORDER BY sq.amount_cents NULLS LAST, sq.created_at`, [requestId, ownerId]);
-    return result.rows.map((r) => ({ id: r.id, quoteRequestId: r.quote_request_id, supplierId: r.supplier_id,
-      amountCents: r.amount_cents ?? undefined, currency: r.currency, details: r.details, status: r.status,
-      validUntil: r.valid_until?.toISOString(), submittedAt: r.submitted_at?.toISOString(), createdAt: r.created_at.toISOString(), updatedAt: r.updated_at.toISOString() }));
-  }
-
-  private mapRequest(r: any, supplierIds: string[]): QuoteRequest {
-    return { id: r.id, propertyId: r.property_id, ownerId: r.owner_id, auditId: r.audit_id ?? undefined,
-      area: r.area ?? undefined, title: r.title, description: r.description, priority: r.priority, status: r.status,
-      supplierIds, createdAt: r.created_at.toISOString(), updatedAt: r.updated_at.toISOString() };
-  }
+  constructor(private readonly pool:Pool){}
+  async listEligibleSuppliers(category?:string):Promise<SupplierProfile[]>{const result=await this.pool.query(`SELECT id,business_name,categories,service_areas,verified,active FROM suppliers WHERE active=true AND verified=true AND ($1::text IS NULL OR $1=ANY(categories)) ORDER BY business_name`,[category??null]);return result.rows.map(r=>({id:r.id,businessName:r.business_name,categories:r.categories,serviceAreas:r.service_areas,verified:r.verified,active:r.active}));}
+  async createQuoteRequest(input:Omit<QuoteRequest,'id'|'createdAt'|'updatedAt'>):Promise<QuoteRequest>{const client=await this.pool.connect();try{await client.query('BEGIN');const result=await client.query(`INSERT INTO quote_requests (property_id,owner_id,audit_id,area,title,description,priority,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,[input.propertyId,input.ownerId,input.auditId??null,input.area??null,input.title,input.description,input.priority,input.status]);for(const supplierId of input.supplierIds)await client.query('INSERT INTO quote_request_suppliers (quote_request_id,supplier_id) VALUES ($1,$2)',[result.rows[0].id,supplierId]);await client.query('COMMIT');return this.mapRequest(result.rows[0],input.supplierIds);}catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}}
+  async listQuoteRequestsForOwner(ownerId:string,propertyId?:string):Promise<QuoteRequest[]>{const result=await this.pool.query(`SELECT qr.*,COALESCE(array_agg(qrs.supplier_id) FILTER (WHERE qrs.supplier_id IS NOT NULL),'{}') supplier_ids FROM quote_requests qr LEFT JOIN quote_request_suppliers qrs ON qrs.quote_request_id=qr.id WHERE qr.owner_id=$1 AND ($2::uuid IS NULL OR qr.property_id=$2) GROUP BY qr.id ORDER BY qr.created_at DESC`,[ownerId,propertyId??null]);return result.rows.map(r=>this.mapRequest(r,r.supplier_ids));}
+  async listOpenQuoteRequestsForSupplier(supplierId:string):Promise<QuoteRequest[]>{const result=await this.pool.query(`SELECT qr.*,COALESCE(array_agg(qrs.supplier_id) FILTER (WHERE qrs.supplier_id IS NOT NULL),'{}') supplier_ids FROM quote_requests qr JOIN quote_request_suppliers target ON target.quote_request_id=qr.id LEFT JOIN quote_request_suppliers qrs ON qrs.quote_request_id=qr.id WHERE target.supplier_id=$1 AND qr.status IN ('OPEN','QUOTING') GROUP BY qr.id ORDER BY CASE qr.priority WHEN 'URGENT' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,qr.created_at`,[supplierId]);return result.rows.map(r=>this.mapRequest(r,r.supplier_ids));}
+  async submitQuote(input:Omit<SupplierQuote,'id'|'createdAt'|'updatedAt'>):Promise<SupplierQuote>{const result=await this.pool.query(`INSERT INTO supplier_quotes (property_id,owner_id,audit_id,supplier_id,quote_request_id,status,amount_cents,currency,details,valid_until,submitted_at) SELECT property_id,owner_id,audit_id,$2,$1,$3,$4,$5,$6,$7,$8 FROM quote_requests WHERE id=$1 RETURNING id,created_at,updated_at`,[input.quoteRequestId,input.supplierId,input.status,input.amountCents??null,input.currency,input.details,input.validUntil??null,input.submittedAt??null]);if(!result.rows[0])throw new Error('QUOTE_REQUEST_NOT_FOUND');return {...input,id:result.rows[0].id,createdAt:result.rows[0].created_at.toISOString(),updatedAt:result.rows[0].updated_at.toISOString()};}
+  async listQuotesForOwnerRequest(requestId:string,ownerId:string):Promise<SupplierQuote[]>{const result=await this.pool.query(`SELECT sq.* FROM supplier_quotes sq JOIN quote_requests qr ON qr.id=sq.quote_request_id WHERE sq.quote_request_id=$1 AND qr.owner_id=$2 ORDER BY sq.amount_cents NULLS LAST,sq.created_at`,[requestId,ownerId]);return result.rows.map(r=>({id:r.id,quoteRequestId:r.quote_request_id,supplierId:r.supplier_id,amountCents:r.amount_cents??undefined,currency:r.currency,details:r.details,status:r.status,validUntil:r.valid_until?.toISOString(),submittedAt:r.submitted_at?.toISOString(),createdAt:r.created_at.toISOString(),updatedAt:r.updated_at.toISOString()}));}
+  private mapRequest(r:any,supplierIds:string[]):QuoteRequest{return{id:r.id,propertyId:r.property_id,ownerId:r.owner_id,auditId:r.audit_id??undefined,area:r.area??undefined,title:r.title,description:r.description,priority:r.priority,status:r.status,supplierIds,createdAt:r.created_at.toISOString(),updatedAt:r.updated_at.toISOString()};}
 }
