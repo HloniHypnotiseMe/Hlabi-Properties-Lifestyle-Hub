@@ -1,0 +1,1 @@
+API endpoints introduced: eligible suppliers, homeowner quote requests, homeowner quote request listing, homeowner quote comparison retrieval, and supplier quote submission.
