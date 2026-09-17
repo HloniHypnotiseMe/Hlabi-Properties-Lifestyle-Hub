@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 
-export const userRoles = ['HOMEOWNER', 'BUYER', 'SELLER', 'INVESTOR', 'AGENT', 'SUPPLIER', 'ADMIN'] as const;
+export const userRoles = ['HOMEOWNER', 'BUYER', 'SELLER', 'INVESTOR', 'AGENT', 'SUPPLIER', 'ACADEMY_REVIEWER', 'ADMIN'] as const;
 export type AuthenticatedRole = typeof userRoles[number];
 
 export interface AuthenticatedPrincipal {
