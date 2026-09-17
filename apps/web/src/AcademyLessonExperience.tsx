@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CheckCircle2, Lock, PlayCircle } from 'lucide-react';
+import './academyLessonExperience.css';
 
 const courseId='hlabi-property-professional-foundation';
 const api=(path:string,options?:RequestInit)=>fetch(path,{credentials:'include',headers:{'Content-Type':'application/json',...(options?.headers||{})},...options});
