@@ -7,125 +7,35 @@ import { PostgresHomeownerRepository } from './postgresRepository.js';
 import { authenticatedPrincipal, DevelopmentAuthenticationProvider, UnconfiguredAuthenticationProvider, requireAuthentication } from './authentication.js';
 import { integrationHealth } from './integrations/health.js';
 import { MemorySupplierRepository, PostgresSupplierRepository } from './supplierRepository.js';
+import { MemoryJobRepository, PostgresJobRepository } from './jobRepository.js';
+import type { EvidenceType, ServiceJobStatus } from './jobDomain.js';
 
-const app = express();
-const port = Number(process.env.PORT ?? 4000);
-const usePostgres = Boolean(process.env.DATABASE_URL);
-const pool = usePostgres ? new Pool({ connectionString: process.env.DATABASE_URL }) : null;
-const repository = pool ? new PostgresHomeownerRepository(pool) : new MemoryHomeownerRepository();
-const supplierRepository = pool ? new PostgresSupplierRepository(pool) : new MemorySupplierRepository();
-const authProvider = process.env.AUTH_MODE === 'development'
-  ? new DevelopmentAuthenticationProvider()
-  : new UnconfiguredAuthenticationProvider();
+const app=express(); const port=Number(process.env.PORT??4000); const usePostgres=Boolean(process.env.DATABASE_URL); const pool=usePostgres?new Pool({connectionString:process.env.DATABASE_URL}):null;
+const repository=pool?new PostgresHomeownerRepository(pool):new MemoryHomeownerRepository(); const supplierRepository=pool?new PostgresSupplierRepository(pool):new MemorySupplierRepository(); const jobRepository=pool?new PostgresJobRepository(pool):new MemoryJobRepository();
+const authProvider=process.env.AUTH_MODE==='development'?new DevelopmentAuthenticationProvider():new UnconfiguredAuthenticationProvider(); const authenticated=requireAuthentication(authProvider);
+app.use(express.json({limit:'256kb'})); app.get('/health',(_req,res)=>res.json({ok:true,service:'hlabi-api',persistence:usePostgres?'postgresql':'memory'})); app.get('/health/integrations',(_req,res)=>res.json({ok:true,integrations:integrationHealth()}));
+const homeownerAuth=authenticated;
+const auditSchema=z.object({propertyId:z.string().min(1),findings:z.array(z.object({area:z.enum(auditAreas),grade:z.enum(conditionGrades),description:z.string().max(1000).optional(),priority:z.enum(['LOW','MEDIUM','URGENT']),recommendedAction:z.string().max(1000),verified:z.boolean().default(false)})).length(auditAreas.length)});
+const quoteRequestSchema=z.object({propertyId:z.string().min(1),auditId:z.string().min(1).optional(),area:z.string().max(100).optional(),title:z.string().min(3).max(160),description:z.string().min(10).max(3000),priority:z.enum(['LOW','MEDIUM','URGENT']),category:z.string().max(80).optional()});
+const supplierQuoteSchema=z.object({quoteRequestId:z.string().min(1),supplierId:z.string().min(1),amountCents:z.number().int().positive().optional(),currency:z.string().length(3).default('ZAR'),details:z.record(z.unknown()).default({}),validUntil:z.string().datetime().optional()});
+const jobStatusSchema=z.object({status:z.enum(['REQUESTED','SCHEDULED','IN_PROGRESS','AWAITING_EVIDENCE','COMPLETED','CANCELLED']),scheduledFor:z.string().datetime().optional()});
+const evidenceSchema=z.object({evidenceType:z.enum(['BEFORE','PROGRESS','AFTER','DOCUMENT']),storageKey:z.string().min(1).max(1000),metadata:z.record(z.unknown()).default({}),capturedAt:z.string().datetime().optional()});
 
-app.use(express.json({ limit: '256kb' }));
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'hlabi-api', persistence: usePostgres ? 'postgresql' : 'memory' }));
-app.get('/health/integrations', (_req, res) => res.json({ ok: true, integrations: integrationHealth() }));
+app.get('/api/v1/homeowner/properties/:propertyId',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const property=await repository.getPropertyForOwner(req.params.propertyId,p.userId);if(!property)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});return res.json(property);});
+app.post('/api/v1/homeowner/audits',homeownerAuth,async(req,res)=>{const parsed=auditSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'INVALID_AUDIT',details:parsed.error.flatten()});const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const property=await repository.getPropertyForOwner(parsed.data.propertyId,p.userId);if(!property)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});const audit=await repository.createAudit({propertyId:property.id,ownerId:p.userId,status:'COMPLETED',findings:parsed.data.findings});return res.status(201).json(audit);});
+app.get('/api/v1/homeowner/properties/:propertyId/audits/latest',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const property=await repository.getPropertyForOwner(req.params.propertyId,p.userId);if(!property)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});const audit=await repository.getLatestAuditForProperty(property.id,p.userId);if(!audit)return res.status(404).json({error:'AUDIT_NOT_FOUND'});return res.json(audit);});
+app.get('/api/v1/homeowner/audits/:auditId',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const audit=await repository.getAuditForOwner(req.params.auditId,p.userId);if(!audit)return res.status(404).json({error:'AUDIT_NOT_FOUND'});return res.json(audit);});
+app.get('/api/v1/homeowner/properties/:propertyId/suppliers',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const property=await repository.getPropertyForOwner(req.params.propertyId,p.userId);if(!property)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});const category=typeof req.query.category==='string'?req.query.category:undefined;return res.json(await supplierRepository.listEligibleSuppliers(category));});
+app.post('/api/v1/homeowner/quote-requests',homeownerAuth,async(req,res)=>{const parsed=quoteRequestSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'INVALID_QUOTE_REQUEST',details:parsed.error.flatten()});const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const property=await repository.getPropertyForOwner(parsed.data.propertyId,p.userId);if(!property)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});const suppliers=await supplierRepository.listEligibleSuppliers(parsed.data.category);const request=await supplierRepository.createQuoteRequest({propertyId:property.id,ownerId:p.userId,auditId:parsed.data.auditId,area:parsed.data.area,title:parsed.data.title,description:parsed.data.description,priority:parsed.data.priority,status:'OPEN',supplierIds:suppliers.map(s=>s.id)});return res.status(201).json(request);});
+app.get('/api/v1/homeowner/properties/:propertyId/quote-requests',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const property=await repository.getPropertyForOwner(req.params.propertyId,p.userId);if(!property)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});return res.json(await supplierRepository.listQuoteRequestsForOwner(p.userId,property.id));});
+app.get('/api/v1/homeowner/quote-requests/:requestId/quotes',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});return res.json(await supplierRepository.listQuotesForOwnerRequest(req.params.requestId,p.userId));});
+app.post('/api/v1/supplier/quotes',homeownerAuth,async(req,res)=>{const parsed=supplierQuoteSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'INVALID_QUOTE',details:parsed.error.flatten()});const p=authenticatedPrincipal(res);if(p.role!=='SUPPLIER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const quote=await supplierRepository.submitQuote({...parsed.data,status:'SUBMITTED',submittedAt:new Date().toISOString()});return res.status(201).json(quote);});
 
-const homeownerAuth = requireAuthentication(authProvider);
-const auditSchema = z.object({
-  propertyId: z.string().min(1),
-  findings: z.array(z.object({
-    area: z.enum(auditAreas), grade: z.enum(conditionGrades), description: z.string().max(1000).optional(),
-    priority: z.enum(['LOW', 'MEDIUM', 'URGENT']), recommendedAction: z.string().max(1000), verified: z.boolean().default(false),
-  })).length(auditAreas.length),
-});
+app.post('/api/v1/homeowner/quote-requests/:requestId/select',homeownerAuth,async(req,res)=>{const body=z.object({quoteId:z.string().min(1),details:z.record(z.unknown()).default({})}).safeParse(req.body);if(!body.success)return res.status(400).json({error:'INVALID_JOB_SELECTION',details:body.error.flatten()});const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const job=await jobRepository.createJobFromQuote({quoteId:body.data.quoteId,ownerId:p.userId,details:{...body.data.details,quoteRequestId:req.params.requestId}});if(!job)return res.status(404).json({error:'QUOTE_NOT_FOUND_OR_NOT_SELECTABLE'});return res.status(201).json(job);});
+app.get('/api/v1/homeowner/properties/:propertyId/jobs',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const property=await repository.getPropertyForOwner(req.params.propertyId,p.userId);if(!property)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});return res.json(await jobRepository.listJobsForOwner(p.userId,property.id));});
+app.get('/api/v1/homeowner/jobs/:jobId',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const job=await jobRepository.getJobForOwner(req.params.jobId,p.userId);if(!job)return res.status(404).json({error:'JOB_NOT_FOUND'});return res.json(job);});
+app.patch('/api/v1/homeowner/jobs/:jobId/status',homeownerAuth,async(req,res)=>{const parsed=jobStatusSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'INVALID_JOB_STATUS',details:parsed.error.flatten()});const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const job=await jobRepository.updateJobStatus(req.params.jobId,p.userId,parsed.data.status as ServiceJobStatus,parsed.data.scheduledFor);if(!job)return res.status(404).json({error:'JOB_NOT_FOUND'});return res.json(job);});
+app.post('/api/v1/homeowner/jobs/:jobId/evidence',homeownerAuth,async(req,res)=>{const parsed=evidenceSchema.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:'INVALID_EVIDENCE',details:parsed.error.flatten()});const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const job=await jobRepository.getJobForOwner(req.params.jobId,p.userId);if(!job)return res.status(404).json({error:'JOB_NOT_FOUND'});const evidence=await jobRepository.addEvidence({jobId:job.id,ownerId:p.userId,propertyId:job.propertyId,evidenceType:parsed.data.evidenceType as EvidenceType,storageKey:parsed.data.storageKey,metadata:parsed.data.metadata,capturedAt:parsed.data.capturedAt??new Date().toISOString()});return res.status(201).json(evidence);});
+app.get('/api/v1/homeowner/jobs/:jobId/evidence',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const job=await jobRepository.getJobForOwner(req.params.jobId,p.userId);if(!job)return res.status(404).json({error:'JOB_NOT_FOUND'});return res.json(await jobRepository.listEvidenceForOwner(job.id,p.userId));});
 
-const quoteRequestSchema = z.object({
-  propertyId: z.string().min(1), auditId: z.string().min(1).optional(), area: z.string().max(100).optional(),
-  title: z.string().min(3).max(160), description: z.string().min(10).max(3000),
-  priority: z.enum(['LOW', 'MEDIUM', 'URGENT']), category: z.string().max(80).optional(),
-});
-
-const supplierQuoteSchema = z.object({
-  quoteRequestId: z.string().min(1), supplierId: z.string().min(1), amountCents: z.number().int().positive().optional(),
-  currency: z.string().length(3).default('ZAR'), details: z.record(z.unknown()).default({}),
-  validUntil: z.string().datetime().optional(),
-});
-
-app.get('/api/v1/homeowner/properties/:propertyId', homeownerAuth, async (req, res) => {
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  const property = await repository.getPropertyForOwner(req.params.propertyId, principal.userId);
-  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
-  return res.json(property);
-});
-
-app.post('/api/v1/homeowner/audits', homeownerAuth, async (req, res) => {
-  const parsed = auditSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'INVALID_AUDIT', details: parsed.error.flatten() });
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  const property = await repository.getPropertyForOwner(parsed.data.propertyId, principal.userId);
-  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
-  const audit = await repository.createAudit({ propertyId: property.id, ownerId: principal.userId, status: 'COMPLETED', findings: parsed.data.findings });
-  return res.status(201).json(audit);
-});
-
-app.get('/api/v1/homeowner/properties/:propertyId/audits/latest', homeownerAuth, async (req, res) => {
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  const property = await repository.getPropertyForOwner(req.params.propertyId, principal.userId);
-  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
-  const audit = await repository.getLatestAuditForProperty(property.id, principal.userId);
-  if (!audit) return res.status(404).json({ error: 'AUDIT_NOT_FOUND' });
-  return res.json(audit);
-});
-
-app.get('/api/v1/homeowner/audits/:auditId', homeownerAuth, async (req, res) => {
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  const audit = await repository.getAuditForOwner(req.params.auditId, principal.userId);
-  if (!audit) return res.status(404).json({ error: 'AUDIT_NOT_FOUND' });
-  return res.json(audit);
-});
-
-app.get('/api/v1/homeowner/properties/:propertyId/suppliers', homeownerAuth, async (req, res) => {
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  const property = await repository.getPropertyForOwner(req.params.propertyId, principal.userId);
-  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
-  const category = typeof req.query.category === 'string' ? req.query.category : undefined;
-  return res.json(await supplierRepository.listEligibleSuppliers(category));
-});
-
-app.post('/api/v1/homeowner/quote-requests', homeownerAuth, async (req, res) => {
-  const parsed = quoteRequestSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'INVALID_QUOTE_REQUEST', details: parsed.error.flatten() });
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  const property = await repository.getPropertyForOwner(parsed.data.propertyId, principal.userId);
-  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
-  const suppliers = await supplierRepository.listEligibleSuppliers(parsed.data.category);
-  const request = await supplierRepository.createQuoteRequest({
-    propertyId: property.id, ownerId: principal.userId, auditId: parsed.data.auditId, area: parsed.data.area,
-    title: parsed.data.title, description: parsed.data.description, priority: parsed.data.priority,
-    status: 'OPEN', supplierIds: suppliers.map((s) => s.id),
-  });
-  return res.status(201).json(request);
-});
-
-app.get('/api/v1/homeowner/properties/:propertyId/quote-requests', homeownerAuth, async (req, res) => {
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  const property = await repository.getPropertyForOwner(req.params.propertyId, principal.userId);
-  if (!property) return res.status(404).json({ error: 'PROPERTY_NOT_FOUND' });
-  return res.json(await supplierRepository.listQuoteRequestsForOwner(principal.userId, property.id));
-});
-
-app.get('/api/v1/homeowner/quote-requests/:requestId/quotes', homeownerAuth, async (req, res) => {
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'HOMEOWNER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  return res.json(await supplierRepository.listQuotesForOwnerRequest(req.params.requestId, principal.userId));
-});
-
-app.post('/api/v1/supplier/quotes', homeownerAuth, async (req, res) => {
-  const parsed = supplierQuoteSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: 'INVALID_QUOTE', details: parsed.error.flatten() });
-  const principal = authenticatedPrincipal(res);
-  if (principal.role !== 'SUPPLIER') return res.status(403).json({ error: 'ROLE_NOT_ALLOWED' });
-  const quote = await supplierRepository.submitQuote({ ...parsed.data, status: 'SUBMITTED', submittedAt: new Date().toISOString() });
-  return res.status(201).json(quote);
-});
-
-app.listen(port, () => console.log(`Hlabi API listening on ${port}`));
+app.listen(port,()=>console.log(`Hlabi API listening on ${port}`));
