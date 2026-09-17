@@ -1,8 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 
+export const userRoles = ['HOMEOWNER', 'BUYER', 'SELLER', 'INVESTOR', 'AGENT', 'SUPPLIER', 'ADMIN'] as const;
+export type AuthenticatedRole = typeof userRoles[number];
+
 export interface AuthenticatedPrincipal {
   userId: string;
-  role: 'HOMEOWNER' | 'BUYER' | 'SELLER' | 'INVESTOR' | 'AGENT' | 'SUPPLIER' | 'ADMIN';
+  role: AuthenticatedRole;
 }
 
 export interface AuthenticationProvider {
@@ -13,7 +16,9 @@ export interface AuthenticationProvider {
 export class DevelopmentAuthenticationProvider implements AuthenticationProvider {
   async authenticate(req: Request): Promise<AuthenticatedPrincipal | null> {
     const userId = String(req.headers['x-hlabi-user-id'] ?? '');
-    return userId ? { userId, role: 'HOMEOWNER' } : null;
+    const requestedRole = String(req.headers['x-hlabi-role'] ?? 'HOMEOWNER').toUpperCase();
+    const role = userRoles.includes(requestedRole as AuthenticatedRole) ? requestedRole as AuthenticatedRole : null;
+    return userId && role ? { userId, role } : null;
   }
 }
 
