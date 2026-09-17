@@ -16,10 +16,13 @@ import { registerBillingRoutes } from './billingRoutes.js';
 import { MemoryMessagingRepository } from './messagingRepository.js';
 import { PostgresMessagingRepository } from './postgresMessagingRepository.js';
 import { registerMessagingRoutes } from './messagingRoutes.js';
+import { MemoryAgentRepository } from './agentRepository.js';
+import { PostgresAgentRepository } from './postgresAgentRepository.js';
+import { registerAgentRoutes } from './agentRoutes.js';
 import type { EvidenceType, ServiceJobStatus } from './jobDomain.js';
 
 const app=express(); const port=Number(process.env.PORT??4000); const usePostgres=Boolean(process.env.DATABASE_URL); const pool=usePostgres?new Pool({connectionString:process.env.DATABASE_URL}):null;
-const repository=pool?new PostgresHomeownerRepository(pool):new MemoryHomeownerRepository(); const supplierRepository=pool?new PostgresSupplierRepository(pool):new MemorySupplierRepository(); const jobRepository=pool?new PostgresJobRepository(pool):new MemoryJobRepository(); const renewalRepository=pool?new PostgresRenewalRepository(pool):new MemoryRenewalRepository(); const billingRepository=pool?new PostgresBillingRepository(pool):new MemoryBillingRepository(); const messagingRepository=pool?new PostgresMessagingRepository(pool):new MemoryMessagingRepository();
+const repository=pool?new PostgresHomeownerRepository(pool):new MemoryHomeownerRepository(); const supplierRepository=pool?new PostgresSupplierRepository(pool):new MemorySupplierRepository(); const jobRepository=pool?new PostgresJobRepository(pool):new MemoryJobRepository(); const renewalRepository=pool?new PostgresRenewalRepository(pool):new MemoryRenewalRepository(); const billingRepository=pool?new PostgresBillingRepository(pool):new MemoryBillingRepository(); const messagingRepository=pool?new PostgresMessagingRepository(pool):new MemoryMessagingRepository(); const agentRepository=pool?new PostgresAgentRepository(pool):new MemoryAgentRepository();
 const paymentProvider=new ConfiguredGatewayPaymentProvider(); const authProvider=process.env.AUTH_MODE==='development'?new DevelopmentAuthenticationProvider():new UnconfiguredAuthenticationProvider(); const authenticated=requireAuthentication(authProvider);
 app.use(express.json({limit:'256kb'})); app.get('/health',(_req,res)=>res.json({ok:true,service:'hlabi-api',persistence:usePostgres?'postgresql':'memory'})); app.get('/health/integrations',(_req,res)=>res.json({ok:true,integrations:integrationHealth()}));
 const homeownerAuth=authenticated;
@@ -48,4 +51,5 @@ app.get('/api/v1/homeowner/jobs/:jobId/evidence',homeownerAuth,async(req,res)=>{
 registerRenewalRoutes(app,homeownerAuth,renewalRepository,repository);
 registerBillingRoutes(app,homeownerAuth,billingRepository,repository,paymentProvider);
 registerMessagingRoutes(app,homeownerAuth,messagingRepository);
+registerAgentRoutes(app,homeownerAuth,agentRepository);
 app.listen(port,()=>console.log(`Hlabi API listening on ${port}`));
