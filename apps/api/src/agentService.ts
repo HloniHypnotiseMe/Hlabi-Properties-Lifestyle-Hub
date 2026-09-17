@@ -20,8 +20,9 @@ export async function seedDefaultStaff(repository:AgentRepository, ownerId:strin
 
 export async function queueAgentTask(repository:AgentRepository,input:{ownerId:string;agentId:string;propertyId?:string;type:string;input:Record<string,unknown>;requiresApproval?:boolean;idempotencyKey?:string}){
   const agent=await repository.getStaffForOwner(input.agentId,input.ownerId); if(!agent||agent.status!=='ACTIVE') return null;
+  if(input.idempotencyKey){const existing=(await repository.listTasks(input.ownerId,input.agentId)).find(t=>t.idempotencyKey===input.idempotencyKey);if(existing)return existing;}
   const task=await repository.createTask({...input,requiresApproval:input.requiresApproval??true,status:'QUEUED'});
-  await repository.appendEvent({taskId:task.id,ownerId:input.ownerId,eventType:'TASK_QUEUED',payload:{agentRole:agent.role,type:task.type}});
+  await repository.appendEvent({taskId:task.id,ownerId:input.ownerId,eventType:'TASK_QUEUED',payload:{agentRole:agent.role,type:task.type,idempotencyKey:input.idempotencyKey}});
   return task;
 }
 
