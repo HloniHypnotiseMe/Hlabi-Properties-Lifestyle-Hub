@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, CalendarDays, CheckCircle2, FileText, Home, ShieldCheck, Wrench } from 'lucide-react';
 import type { HomeAuditFinding, HomeownerDashboardData } from '../domain/property';
 import { demoHomeownerRepository } from '../domain/homeownerRepository';
+import { getLatestHomeAudit } from '../api/homeownerApi';
 import HomeAuditWizard from './HomeAuditWizard';
 import './portal.css';
 
@@ -14,6 +15,7 @@ export default function HomeownerPortal({ userId, onSignOut }: HomeownerPortalPr
   const [data, setData] = useState<HomeownerDashboardData | null>(null);
   const [auditOpen, setAuditOpen] = useState(false);
   const [completedFindings, setCompletedFindings] = useState<HomeAuditFinding[] | null>(null);
+  const [auditLoadError, setAuditLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -25,6 +27,37 @@ export default function HomeownerPortal({ userId, onSignOut }: HomeownerPortalPr
     };
   }, [userId]);
 
+  useEffect(() => {
+    const propertyId = data?.properties[0]?.id;
+    if (!propertyId) return;
+
+    let active = true;
+    setAuditLoadError(null);
+    getLatestHomeAudit(propertyId, userId)
+      .then((audit) => {
+        if (!active) return;
+        setCompletedFindings(audit.findings.map((finding, index) => ({
+          id: `audit-finding-${index + 1}`,
+          area: finding.area as HomeAuditFinding['area'],
+          title: finding.area,
+          description: finding.description ?? '',
+          grade: finding.grade,
+          priority: finding.priority,
+          recommendedAction: finding.recommendedAction,
+          verified: finding.verified,
+        })));
+      })
+      .catch((error) => {
+        if (!active) return;
+        // A 404 simply means the homeowner has not completed an audit yet.
+        if (error instanceof Error && error.message !== 'AUDIT_NOT_FOUND') setAuditLoadError('Saved audit could not be loaded.');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [data, userId]);
+
   if (!data) return <div className="portal-loading">Loading your property hub…</div>;
 
   const property = data.properties[0];
@@ -32,7 +65,13 @@ export default function HomeownerPortal({ userId, onSignOut }: HomeownerPortalPr
   const openTasks = plan?.tasks.filter((task) => task.status !== 'COMPLETED').length ?? 0;
 
   if (auditOpen && property) {
-    return <HomeAuditWizard propertyName={property.nickname} onCancel={() => setAuditOpen(false)} onComplete={(findings) => { setCompletedFindings(findings); setAuditOpen(false); }} />;
+    return <HomeAuditWizard
+      propertyId={property.id}
+      propertyName={property.nickname}
+      userId={userId}
+      onCancel={() => setAuditOpen(false)}
+      onComplete={(findings) => { setCompletedFindings(findings); setAuditOpen(false); }}
+    />;
   }
 
   const auditSummary = completedFindings
@@ -64,7 +103,8 @@ export default function HomeownerPortal({ userId, onSignOut }: HomeownerPortalPr
         <div className="property-health"><span>RENEWAL HEALTH</span><strong>{property.conditionScore}%</strong><small>{property.conditionGrade} · reviewed {data.audits[0]?.inspectedAt}</small></div>
       </section>
 
-      {auditSummary && <section className="audit-complete-banner"><CheckCircle2 size={20} /><div><b>Digital Home Audit completed</b><span>{auditSummary}. Findings are ready for the next planning step.</span></div><button onClick={() => setAuditOpen(true)}>Review again</button></section>}
+      {auditLoadError && <div className="portal-note">{auditLoadError} You can still run a new audit.</div>}
+      {auditSummary && <section className="audit-complete-banner"><CheckCircle2 size={20} /><div><b>Digital Home Audit completed</b><span>{auditSummary}. Findings are saved to your property record.</span></div><button onClick={() => setAuditOpen(true)}>Review again</button></section>}
 
       <section className="portal-grid">
         <article className="portal-card plan-card">
@@ -89,7 +129,7 @@ export default function HomeownerPortal({ userId, onSignOut }: HomeownerPortalPr
         </article>
       </section>
 
-      <div className="portal-note">Demo workflow: audit results currently remain in the browser session. Production persistence, professional verification, supplier matching, payments and document storage will connect through the backend contracts as those services are implemented.</div>
+      <div className="portal-note">API-connected workflow: completed audits are submitted through the authenticated homeowner API and stored by the configured repository. The development adapter supports demo identity; production requires the verified authentication provider and production database.</div>
     </main>
   );
 }
