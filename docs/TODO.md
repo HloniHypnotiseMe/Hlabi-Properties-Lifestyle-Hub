@@ -67,18 +67,12 @@ This is the living execution tracker. `DONE` means the capability is represented
 
 ## 6. AI orchestration — CURRENT BUILD BLOCK
 
-Existing AI foundations include a provider-neutral boundary, Ollama adapter, agent task orchestration, permission-based tools and approval-gated outputs. citeturn460file0
+Existing AI foundations include a provider-neutral boundary, Ollama adapter, agent task orchestration, permission-based tools and approval-gated outputs.
 
-- [ ] `NEXT` Trusted-advisor context assembler
-  - Home Passport
-  - property/audit state
-  - renewal plan
-  - supplier eligibility
-  - quotes
-  - jobs/evidence
-  - reputation
-  - Academy/agent context where authorised
-- [ ] `NEXT` Context-aware recommendation engine
+- [x] `DONE` Trusted-advisor context assembler foundation — property, Home Passport, latest audit, eligible suppliers, quote requests and jobs
+- [x] `DONE` Context-aware deterministic recommendation engine foundation
+- [x] `DONE` Property-scoped advisor API with homeowner authorization
+- [ ] `NEXT` Connect renewal plans, supplier reputation and authorised Academy/agent context
 - [ ] `NEXT` Tool execution registry with explicit permissions
 - [ ] `NEXT` Approval workflow for quote requests, messages and scheduling
 - [ ] `NEXT` Idempotency + audit events for every external action
@@ -110,8 +104,6 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 - [ ] `NEXT` Notification preferences
 - [ ] `HARDEN` Provider webhook verification, retries, monitoring and rollback
 
-The repository already defines provider-neutral activation controls and requires sandbox testing, credentials, webhook verification, monitoring and rollback before production activation. citeturn458file0
-
 ## 10. Production hardening
 
 - [ ] `BLOCKER` Run API build + automated test suite in a working CI environment and resolve failures
@@ -136,7 +128,7 @@ The repository already defines provider-neutral activation controls and requires
 
 ## Execution order
 
-**Current:** AI orchestration → trusted-advisor context → tool permissions/approval → linked Home Passport → supplier/job actions.
+**Current:** AI orchestration → permissions/approval → live Home Passport linkage → supplier/job actions.
 
 **Then:** buyer/seller/investor expansion → media/experience → commercial integrations → production hardening.
 
