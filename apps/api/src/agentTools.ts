@@ -10,6 +10,7 @@ export const agentTools: AgentToolDefinition[] = [
   { name: 'task.create', permission: 'CREATE_TASK', description: 'Create a follow-up agent task.' },
   { name: 'quote-request.create', permission: 'CREATE_QUOTE_REQUEST', description: 'Create a supplier quote request.' },
   { name: 'job.schedule', permission: 'SCHEDULE_JOB', description: 'Propose or schedule a service job.' },
+  { name: 'job.settle', permission: 'SETTLE_JOB', description: 'Pay the authoritative stored quote amount for a service job after explicit human approval.' },
 ];
 
 export function canUseTool(context: AgentToolContext, permission: AgentPermission): boolean {
