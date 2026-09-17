@@ -11,6 +11,7 @@ export interface AgentRepository {
   listTasks(ownerId: string, agentId?: string): Promise<AgentTask[]>;
   updateTask(taskId: string, ownerId: string, patch: Partial<Pick<AgentTask, 'status' | 'output' | 'errorCode' | 'startedAt' | 'completedAt'>>): Promise<AgentTask | null>;
   appendEvent(input: Omit<AgentTaskEvent, 'id' | 'createdAt'>): Promise<AgentTaskEvent>;
+  hasApprovalGrant(taskId: string, ownerId: string): Promise<boolean>;
 }
 
 export class MemoryAgentRepository implements AgentRepository {
@@ -35,4 +36,5 @@ export class MemoryAgentRepository implements AgentRepository {
     const item = await this.getTaskForOwner(taskId, ownerId); if (!item) return null; Object.assign(item, patch); return item;
   }
   async appendEvent(input: Omit<AgentTaskEvent, 'id' | 'createdAt'>) { const item = { ...input, id: randomUUID(), createdAt: new Date().toISOString() }; this.events.push(item); return item; }
+  async hasApprovalGrant(taskId: string, ownerId: string) { return this.events.some(e => e.taskId === taskId && e.ownerId === ownerId && e.eventType === 'HUMAN_APPROVAL_GRANTED'); }
 }
