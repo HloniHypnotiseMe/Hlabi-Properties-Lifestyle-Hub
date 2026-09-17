@@ -1,6 +1,6 @@
 # Hlabi Properties Lifestyle Hub — TODO Tracker
 
-**Last updated:** 2026-09-17
+**Last updated:** 2026-09-18
 
 This is the living execution tracker. `DONE` means the capability is represented in the repository; `NEXT` means the next implementation block; `HARDEN` means built but still requiring production validation, testing, assets or operational work.
 
@@ -23,9 +23,10 @@ This is the living execution tracker. `DONE` means the capability is represented
 - [x] `DONE` Job lifecycle foundation
 - [x] `DONE` Completion evidence foundation
 - [x] `DONE` Supplier reputation foundation
-- [ ] `HARDEN` End-to-end supplier/customer workflow tests
+- [x] `DONE` End-to-end supplier/customer workflow tests — Pay → Complete → Review coverage added
 - [ ] `HARDEN` Supplier verification operations/admin controls
-- [ ] `NEXT` Quote comparison → selection → booking → payment/settlement hardening
+- [x] `DONE` Quote selection → booking → payment/settlement server hardening
+- [ ] `HARDEN` Provider-backed payment sandbox, webhook reconciliation and settlement retries
 
 ## 3. Home Passport
 
@@ -72,7 +73,9 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 - [x] `DONE` Trusted-advisor context assembler foundation — property, Home Passport, latest audit, eligible suppliers, quote requests and jobs
 - [x] `DONE` Context-aware deterministic recommendation engine foundation
 - [x] `DONE` Property-scoped advisor API with homeowner authorization
-- [ ] `NEXT` Connect renewal plans, supplier reputation and authorised Academy/agent context
+- [x] `DONE` Connect renewal plans into advisor context
+- [x] `DONE` Surface unpaid booked jobs in advisor context
+- [ ] `NEXT` Connect supplier reputation and authorised Academy/agent context
 - [x] `DONE` Tool execution registry with explicit permissions
 - [x] `DONE` Approval workflow for quote requests, messages and scheduling
 - [x] `DONE` Idempotent AI task creation + action audit events
@@ -97,7 +100,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 ## 9. Integrations / commercial infrastructure
 
-- [ ] `NEXT` Payment/settlement sandbox for supplier jobs
+- [ ] `NEXT` Payment/settlement sandbox for supplier jobs — provider/webhook hardening remains
 - [ ] `NEXT` Messaging provider sandbox + delivery events
 - [ ] `NEXT` Document storage provider boundary
 - [ ] `NEXT` Scheduling provider boundary
@@ -128,7 +131,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 ## Execution order
 
-**Current:** live Home Passport linkage → supplier/job actions → renewal/reputation/authorised context → buyer/seller/investor expansion.
+**Current:** live Home Passport linkage → supplier/job actions → supplier reputation/authorised context → buyer/seller/investor expansion.
 
 **Then:** media/experience → commercial integrations → production hardening.
 
