@@ -1,0 +1,1 @@
+Stage 6 reviewer UI implementation branch. Review before merge; no CI status asserted without workflow evidence.
