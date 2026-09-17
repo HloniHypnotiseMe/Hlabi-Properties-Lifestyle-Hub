@@ -69,6 +69,14 @@ export function createHomeAudit(propertyId: string, findings: HomeAuditFinding[]
   }, userId);
 }
 
+export function getLatestHomeAudit(propertyId: string, userId: string) {
+  return request<ApiAuditRecord>(
+    `/api/v1/homeowner/properties/${encodeURIComponent(propertyId)}/audits/latest`,
+    {},
+    userId,
+  );
+}
+
 export function getHomeAudit(auditId: string, userId: string) {
   return request<ApiAuditRecord>(`/api/v1/homeowner/audits/${encodeURIComponent(auditId)}`, {}, userId);
 }
