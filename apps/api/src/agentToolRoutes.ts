@@ -8,6 +8,7 @@ import type { HomeownerRepository } from './repository.js';
 import type { SupplierRepository } from './supplierRepository.js';
 import type { JobRepository } from './jobRepository.js';
 import type { MessagingRepository } from './messagingRepository.js';
+import type { AgentPropertyAccessRepository } from './agentPropertyAccessRepository.js';
 import { authenticatedPrincipal } from './authentication.js';
 
 const toolSchema = z.object({
@@ -16,8 +17,8 @@ const toolSchema = z.object({
 });
 const approveSchema = z.object({ action:z.literal('approve') });
 
-export function registerAgentToolRoutes(app:Express, authenticated:RequestHandler, agentRepository:AgentRepository, homeownerRepository:HomeownerRepository, supplierRepository:SupplierRepository, jobRepository:JobRepository, messagingRepository:MessagingRepository) {
-  const service = new AgentToolExecutionService(homeownerRepository,supplierRepository,jobRepository,messagingRepository,agentRepository);
+export function registerAgentToolRoutes(app:Express, authenticated:RequestHandler, agentRepository:AgentRepository, homeownerRepository:HomeownerRepository, supplierRepository:SupplierRepository, jobRepository:JobRepository, messagingRepository:MessagingRepository, propertyAccessRepository:AgentPropertyAccessRepository) {
+  const service = new AgentToolExecutionService(homeownerRepository,supplierRepository,jobRepository,messagingRepository,agentRepository,propertyAccessRepository);
   app.post('/api/v1/agent-ai/tools/execute',authenticated,async(req,res)=>{
     const principal=authenticatedPrincipal(res); if(principal.role!=='AGENT')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});
     const parsed=toolSchema.safeParse(req.body); if(!parsed.success)return res.status(400).json({error:'INVALID_TOOL_REQUEST',details:parsed.error.flatten()});
