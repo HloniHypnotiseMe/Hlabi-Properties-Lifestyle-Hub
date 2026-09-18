@@ -7,7 +7,7 @@ export class ConfiguredGatewayPaymentProvider implements PaymentProvider {
   async parseWebhook(input:{body:Record<string,unknown>;signature?:string}) {
     if (this.name.toLowerCase()!=='sandbox') throw new Error('PAYMENT_WEBHOOK_NOT_IMPLEMENTED');
     const secret=process.env.PAYMENT_WEBHOOK_SECRET;
-    if (secret && input.signature!==secret) throw new Error('INVALID_PAYMENT_WEBHOOK_SIGNATURE');
+    if (!secret || input.signature!==secret) throw new Error('INVALID_PAYMENT_WEBHOOK_SIGNATURE');
     const body=input.body;
     const eventId=typeof body.eventId==='string'?body.eventId:'';
     const reference=typeof body.reference==='string'?body.reference:'';
