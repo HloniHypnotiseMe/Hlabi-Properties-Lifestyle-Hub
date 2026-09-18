@@ -30,3 +30,15 @@ test('documents are transaction scoped and audit events are append-only',async()
  assert.equal((await a.list('tx-1')).length,1);
  assert.equal((await a.list('tx-2')).length,0);
 });
+
+
+test('document resubmission clears stale verification evidence',async()=>{
+ const d=new MemoryTransactionDocumentsRepository();
+ const doc=await d.create({transactionId:'tx-verify',kind:'IDENTITY',label:'Identity',status:'SUBMITTED',storageKey:'v1'});
+ const verified=await d.update(doc.id,{status:'VERIFIED',verifiedBy:'agent-1',verifiedAt:'2026-09-18T08:00:00.000Z'});
+ assert.equal(verified?.verifiedBy,'agent-1');
+ const resubmitted=await d.update(doc.id,{status:'SUBMITTED',storageKey:'v2',submittedBy:'buyer-1'});
+ assert.equal(resubmitted?.status,'SUBMITTED');
+ assert.equal(resubmitted?.verifiedBy,undefined);
+ assert.equal(resubmitted?.verifiedAt,undefined);
+});
