@@ -8,11 +8,12 @@ import type {AgentRepository} from './agentRepository.js';
 import type {TransactionDocumentsRepository} from './transactionDocumentsRepository.js';
 import {transactionDocumentKinds,transactionDocumentStatuses} from './transactionDocumentsDomain.js';
 import type {TransactionAuditRepository} from './transactionAuditRepository.js';
+import {canActorAccessTransaction} from './transactionAuthorization.js';
 
 const initialDocuments=[['OFFER_ACCEPTANCE','Offer acceptance'],['IDENTITY','Identity documents'],['FINANCE','Finance / proof of funds'],['COMPLIANCE','Compliance documents'],['TRANSFER','Transfer / registration documents'],['OTHER','Other transaction documents']] as const;
 
 export function registerTransactionRoutes(app:Express,auth:RequestHandler,interest:TransactionInterestRepository,tx:TransactionRepository,agents:AgentRepository,documents:TransactionDocumentsRepository,audit:TransactionAuditRepository){
- const actorAllowed=(p:any,item:any)=>p.role==='ADMIN'||[item.buyerId,item.sellerId,item.agentId].includes(p.userId);
+ const actorAllowed=(p:any,item:any)=>canActorAccessTransaction(p,item);
  const seedDocuments=async(transactionId:string)=>{for(const [kind,label] of initialDocuments){if(!(await documents.list(transactionId)).some(x=>x.kind===kind))await documents.create({transactionId,kind,status:'REQUIRED',label});}};
  const record=async(transactionId:string,actorId:string,eventType:string,payload:Record<string,unknown>={})=>audit.append({transactionId,actorId,eventType,payload});
  app.post('/api/v1/seller/offers/:offerId/accept-transaction',auth,async(req,res)=>{
