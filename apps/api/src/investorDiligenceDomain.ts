@@ -7,7 +7,7 @@ export type DiligenceEvidenceKind='PROPERTY_FACTS'|'OWNERSHIP'|'OCCUPANCY'|'RENT
 export interface InvestorDiligenceEvidence {
   id:string; investorId:string; listingId:string; kind:DiligenceEvidenceKind;
   status:DiligenceEvidenceStatus; label:string; value?:string; source?:string;
-  notes?:string; capturedAt:string; verifiedAt?:string;
+  notes?:string; capturedAt:string; verifiedAt?:string; verifiedBy?:string;
 }
 
 export interface InvestorAcquisitionMetrics {
