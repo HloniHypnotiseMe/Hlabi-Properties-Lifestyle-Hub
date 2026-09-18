@@ -9,12 +9,13 @@ import type { ReputationRepository } from './reputationRepository.js';
 import type { AgentRepository } from './agentRepository.js';
 import type { AcademyRepository } from './academyRepository.js';
 import type { AcademyAssessmentRepository } from './academyAssessmentRepository.js';
+import type { JourneyRepository } from './journeyRepository.js';
 
 export type AdvisorSource = 'PROPERTY'|'HOME_PASSPORT'|'AUDIT'|'SUPPLIER'|'QUOTE'|'JOB'|'PAYMENT'|'RENEWAL'|'SYSTEM';
 export interface AdvisorAction { id:string; type:'REVIEW_AUDIT'|'REQUEST_QUOTES'|'REVIEW_QUOTES'|'PAY_JOB'|'SCHEDULE_JOB'|'FOLLOW_JOB'|'UPDATE_PASSPORT'|'CONTACT_SUPPLIER'|'REVIEW_RENEWAL'; title:string; rationale:string; sources:AdvisorSource[]; requiresConfirmation:boolean; linkedIds:string[]; }
 export interface AdvisorSnapshot { property:any; passport:any|null; latestAudit:any|null; renewalPlan:any|null; renewalTasks:any[]; eligibleSupplierCount:number; quoteRequests:any[]; jobs:any[]; actions:AdvisorAction[]; aiSummary?:string; ai:{enabled:boolean;provider?:string;model?:string}; }
 
-export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:string;repository:HomeownerRepository;passportRepository:HomePassportRepository;supplierRepository:SupplierRepository;jobRepository:JobRepository;reputationRepository?:ReputationRepository;billingRepository?:BillingRepository;renewalRepository?:RenewalRepository;aiProvider?:AiProviderAdapter;aiModel?:string;agentRepository?:AgentRepository;academyRepository?:AcademyRepository;academyAssessmentRepository?:AcademyAssessmentRepository;}):Promise<AdvisorSnapshot|null>{
+export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:string;repository:HomeownerRepository;passportRepository:HomePassportRepository;supplierRepository:SupplierRepository;jobRepository:JobRepository;reputationRepository?:ReputationRepository;billingRepository?:BillingRepository;renewalRepository?:RenewalRepository;aiProvider?:AiProviderAdapter;aiModel?:string;agentRepository?:AgentRepository;academyRepository?:AcademyRepository;academyAssessmentRepository?:AcademyAssessmentRepository;journeyRepository?:JourneyRepository;}):Promise<AdvisorSnapshot|null>{
   const property=await input.repository.getPropertyForOwner(input.propertyId,input.ownerId); if(!property)return null;
   const renewalPlan=input.renewalRepository?await input.renewalRepository.getPlanForOwner(property.id,input.ownerId):null;
   const [passport,latestAudit,eligibleSuppliers,quoteRequests,jobs,renewalTasks]=await Promise.all([
@@ -45,13 +46,15 @@ export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:str
   }
   if(!passport) actions.push({id:'passport',type:'UPDATE_PASSPORT',title:'Create your Home Passport',rationale:'A Home Passport gives the advisor a durable property context for future decisions.',sources:['HOME_PASSPORT','PROPERTY'],requiresConfirmation:false,linkedIds:[property.id]});
   const supplierReputation=input.reputationRepository?await Promise.all(eligibleSuppliers.map(s=>input.reputationRepository!.getSummaryForSupplier(s.id))):[];
+  const journeys=input.journeyRepository?{buyer:await input.journeyRepository.getBuyer(input.ownerId),investor:await input.journeyRepository.getInvestor(input.ownerId)}:null;
+  const sellerJourneys=[];
   const agentStaff=input.agentRepository?await input.agentRepository.listStaff(input.ownerId):[];
   const agentTasks=input.agentRepository?await input.agentRepository.listTasks(input.ownerId):[];
   const academyEnrollments=input.academyRepository?await input.academyRepository.listEnrollments(input.ownerId):[];
   const academyEvidence=await Promise.all(academyEnrollments.map(async e=>({enrollmentId:e.id,completedModules:e.completedModules,progressPercent:e.progressPercent,attempts:input.academyAssessmentRepository?await input.academyAssessmentRepository.listAttempts(e.id,input.ownerId):[]})));
   const agentContext={staff:agentStaff.map(a=>({id:a.id,role:a.role,name:a.name,status:a.status})),tasks:agentTasks.map(t=>({id:t.id,agentId:t.agentId,propertyId:t.propertyId,type:t.type,status:t.status,createdAt:t.createdAt}))};
   const academyContext={enrollments:academyEvidence};
-  const snapshot={property,passport,latestAudit,renewalPlan,renewalTasks,eligibleSupplierCount:eligibleSuppliers.length,supplierReputation,quoteRequests,jobs,actions,agentContext,academyContext};
+  const snapshot={property,passport,latestAudit,renewalPlan,renewalTasks,eligibleSupplierCount:eligibleSuppliers.length,supplierReputation,quoteRequests,jobs,actions,agentContext,academyContext,journeys};
   let aiSummary:string|undefined; let aiEnabled=false; let provider:string|undefined;
   if(input.aiProvider){try{const result=await input.aiProvider.generate({provider:'OLLAMA',model:input.aiModel??'llama3.2',temperature:0.1,maxTokens:240,system:'You are Hlabi\'s property advisor. Use only supplied facts. Never invent prices, supplier verification, qualifications, completion, regulatory status or actions already taken. Return a concise next-step summary.',prompt:JSON.stringify({property,passport,latestAudit,renewalPlan,renewalTasks,quoteRequests,jobs,actions})});aiSummary=result.text;aiEnabled=true;provider=result.provider;}catch{aiEnabled=false;}}
   return {...snapshot,aiSummary,ai:{enabled:aiEnabled,provider,model:aiEnabled?(input.aiModel??'llama3.2'):undefined}};
