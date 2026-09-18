@@ -96,7 +96,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 - [x] `DONE` Investor portfolio intelligence — richer verified property data, diligence evidence and acquisition metrics
 - [x] `DONE` Transaction support journey — accepted offer → agent → documents → transfer → completion
 - [x] `DONE` Transaction participant authorization helper + regression coverage
-- [ ] `NEXT` Transaction document storage provider boundary + real upload/download flow
+- [x] `DONE` Transaction document storage provider boundary + real upload/download flow
 - [ ] `NEXT` Full transaction API integration test suite
 
 ## 8. Media + experience
