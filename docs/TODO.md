@@ -24,10 +24,11 @@ This is the living execution tracker. `DONE` means the capability is represented
 - [x] `DONE` Completion evidence foundation
 - [x] `DONE` Supplier reputation foundation
 - [x] `DONE` End-to-end supplier/customer workflow tests — Pay → Complete → Review coverage added
+- [x] `DONE` Supplier settlement operations/admin controls
 - [ ] `HARDEN` Supplier verification operations/admin controls
 - [x] `DONE` Quote selection → booking → payment/settlement server hardening
 - [x] `DONE` Provider-backed payment sandbox + webhook reconciliation + supplier settlement ledger
-- [ ] `HARDEN` Live provider payout adapter, settlement retries and reconciliation operations
+- [ ] `NEXT` Live provider payout adapter, settlement retries and reconciliation operations
 
 ## 3. Home Passport
 
