@@ -8,10 +8,7 @@ import { authenticatedPrincipal, DevelopmentAuthenticationProvider, Unconfigured
 import { integrationHealth } from './integrations/health.js';
 import { MemorySupplierRepository, PostgresSupplierRepository } from './supplierRepository.js';
 import { MemorySupplierEcosystemRepository, PostgresSupplierEcosystemRepository } from './supplierEcosystemRepository.js';
-import { app.get('/api/v1/supplier/settlements',homeownerAuth,async(_req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='SUPPLIER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});return res.json(await settlementRepository.listForSupplier(p.userId));});
-app.get('/api/v1/admin/settlements',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='ADMIN')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const supplierId=typeof req.query.supplierId==='string'?req.query.supplierId:undefined;const rows=supplierId?await settlementRepository.listForSupplier(supplierId):[];return res.json(rows);});
-app.post('/api/v1/admin/settlements/:id/status',homeownerAuth,async(req,res)=>{const p=authenticatedPrincipal(res);if(p.role!=='ADMIN')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const status=req.body?.status;if(!['PENDING','ELIGIBLE','PROCESSING','PAID','FAILED','HELD'].includes(status))return res.status(400).json({error:'INVALID_STATUS'});try{const row=await settlementRepository.updateStatus(req.params.id,status,req.body?.payoutReference,req.body?.failureReason);if(!row)return res.status(404).json({error:'SETTLEMENT_NOT_FOUND'});return res.json(row)}catch(error:any){return res.status(409).json({error:String(error?.message??'SETTLEMENT_UPDATE_FAILED')})}});
-registerSupplierEcosystemRoutes } from './supplierEcosystemRoutes.js';
+import { registerSupplierEcosystemRoutes } from './supplierEcosystemRoutes.js';
 import { MemoryJobRepository, PostgresJobRepository } from './jobRepository.js';
 import { MemoryRenewalRepository, PostgresRenewalRepository } from './renewalRepository.js';
 import { registerRenewalRoutes } from './renewalRoutes.js';
