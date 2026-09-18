@@ -93,8 +93,11 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 - [x] `DONE` Seller lead → viewing → offer journey
 - [x] `DONE` Investor opportunity intelligence screening foundation
 - [x] `DONE` Investor portfolio/property intelligence workflow — watchlist and portfolio state foundation
-- [ ] `NEXT` Investor portfolio intelligence — richer verified property data, diligence evidence and acquisition metrics
-- [ ] `NEXT` Transaction support journey linking agent + property + documents
+- [x] `DONE` Investor portfolio intelligence — richer verified property data, diligence evidence and acquisition metrics
+- [x] `DONE` Transaction support journey — accepted offer → agent → documents → transfer → completion
+- [x] `DONE` Transaction participant authorization helper + regression coverage
+- [ ] `NEXT` Transaction document storage provider boundary + real upload/download flow
+- [ ] `NEXT` Full transaction API integration test suite
 
 ## 8. Media + experience
 
@@ -137,7 +140,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 ## Execution order
 
-**Current:** richer investor diligence intelligence → transaction support.
+**Current:** transaction document storage/upload + API integration hardening.
 
 **Then:** media/experience → commercial integrations → production hardening.
 
