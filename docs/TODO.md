@@ -28,6 +28,7 @@ This is the living execution tracker. `DONE` means the capability is represented
 - [ ] `HARDEN` Supplier verification operations/admin controls
 - [x] `DONE` Quote selection → booking → payment/settlement server hardening
 - [x] `DONE` Provider-backed payment sandbox + webhook reconciliation + supplier settlement ledger
+- [x] `DONE` Settlement lifecycle policy + regression tests
 - [ ] `NEXT` Live provider payout adapter, settlement retries and reconciliation operations
 
 ## 3. Home Passport
