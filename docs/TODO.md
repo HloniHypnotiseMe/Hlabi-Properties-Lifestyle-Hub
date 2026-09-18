@@ -89,7 +89,8 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 ## 7. Buyer / seller / investor expansion
 
 - [x] `DONE` Buyer discovery + affordability intake — live buyer journey capture
-- [ ] `NEXT` Seller preparation → listing → lead/viewing journey
+- [x] `DONE` Seller preparation → listing draft → confirmed publish workflow
+- [ ] `NEXT` Seller lead → viewing → offer journey
 - [ ] `NEXT` Investor portfolio/property intelligence workflow
 - [ ] `NEXT` Transaction support journey linking agent + property + documents
 
@@ -134,7 +135,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 ## Execution order
 
-**Current:** buyer journey intake → seller preparation workflow → investor intelligence → transaction support.
+**Current:** seller lead/viewing → investor intelligence → transaction support.
 
 **Then:** media/experience → commercial integrations → production hardening.
 
