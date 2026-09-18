@@ -3,6 +3,7 @@ import { ArrowRight, Home, Store, UserRound, ShieldCheck } from 'lucide-react';
 import HomeownerPortal from './portal/HomeownerPortal';
 import JourneyExplorer from './JourneyExplorer';
 import InvestorOpportunities from './InvestorOpportunities';
+import InvestorPortfolio from './InvestorPortfolio';
 import AcademyLessonExperience from './AcademyLessonExperience';
 import AcademyReadinessExam from './AcademyReadinessExam';
 import AcademyReviewer from './AcademyReviewer';
