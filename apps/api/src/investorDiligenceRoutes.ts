@@ -32,6 +32,6 @@ export function registerInvestorDiligenceRoutes(app:Express,auth:RequestHandler,
   const investorId=typeof req.body?.investorId==='string'?req.body.investorId:'';const source=typeof req.body?.source==='string'?req.body.source.trim().slice(0,500):'';
   if(!investorId)return res.status(400).json({error:'INVESTOR_ID_REQUIRED'});if(!source)return res.status(400).json({error:'VERIFICATION_SOURCE_REQUIRED'});
   const prior=(await diligence.list(investorId,listing.id)).find(x=>x.kind===req.params.kind);if(!prior)return res.status(404).json({error:'EVIDENCE_NOT_CAPTURED'});
-  return res.json(await diligence.upsert({...prior,status:'VERIFIED',source,verifiedAt:new Date().toISOString()}));
+  return res.json(await diligence.upsert({...prior,status:'VERIFIED',source,verifiedAt:new Date().toISOString(),verifiedBy:p.userId}));
  });
 }
