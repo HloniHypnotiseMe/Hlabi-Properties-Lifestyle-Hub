@@ -4,3 +4,5 @@ export const transactionMilestoneStatuses=['PENDING','IN_PROGRESS','COMPLETED','
 export type TransactionMilestoneStatus=typeof transactionMilestoneStatuses[number];
 export interface PropertyTransaction{id:string;offerId:string;listingId:string;propertyId:string;buyerId:string;sellerId:string;agentId?:string;status:TransactionStatus;notes?:string;createdAt:string;updatedAt:string;completedAt?:string;}
 export interface TransactionMilestone{id:string;transactionId:string;key:string;label:string;status:TransactionMilestoneStatus;notes?:string;updatedAt:string;}
+export const transactionStatusTransitions:Record<TransactionStatus,readonly TransactionStatus[]>={OPEN:['CONDITIONAL','IN_TRANSFER','CANCELLED'],CONDITIONAL:['IN_TRANSFER','CANCELLED'],IN_TRANSFER:['COMPLETED','CANCELLED'],COMPLETED:[],CANCELLED:[]};
+export function canTransitionTransactionStatus(from:TransactionStatus,to:TransactionStatus){return from===to||transactionStatusTransitions[from].includes(to);}
