@@ -9,10 +9,11 @@ import type {TransactionDocumentsRepository} from './transactionDocumentsReposit
 import {transactionDocumentKinds,transactionDocumentStatuses} from './transactionDocumentsDomain.js';
 import type {TransactionAuditRepository} from './transactionAuditRepository.js';
 import {canActorAccessTransaction} from './transactionAuthorization.js';
+import type {AgentPropertyAccessRepository} from './agentPropertyAccessRepository.js';
 
 const initialDocuments=[['OFFER_ACCEPTANCE','Offer acceptance'],['IDENTITY','Identity documents'],['FINANCE','Finance / proof of funds'],['COMPLIANCE','Compliance documents'],['TRANSFER','Transfer / registration documents'],['OTHER','Other transaction documents']] as const;
 
-export function registerTransactionRoutes(app:Express,auth:RequestHandler,interest:TransactionInterestRepository,tx:TransactionRepository,agents:AgentRepository,documents:TransactionDocumentsRepository,audit:TransactionAuditRepository){
+export function registerTransactionRoutes(app:Express,auth:RequestHandler,interest:TransactionInterestRepository,tx:TransactionRepository,agents:AgentRepository,documents:TransactionDocumentsRepository,audit:TransactionAuditRepository,propertyAccess:AgentPropertyAccessRepository){
  const actorAllowed=(p:any,item:any)=>canActorAccessTransaction(p,item);
  const seedDocuments=async(transactionId:string)=>{for(const [kind,label] of initialDocuments){if(!(await documents.list(transactionId)).some(x=>x.kind===kind))await documents.create({transactionId,kind,status:'REQUIRED',label});}};
  const record=async(transactionId:string,actorId:string,eventType:string,payload:Record<string,unknown>={})=>audit.append({transactionId,actorId,eventType,payload});
@@ -28,7 +29,7 @@ export function registerTransactionRoutes(app:Express,auth:RequestHandler,intere
  app.post('/api/v1/transactions/:id/agent',auth,async(req,res)=>{
   const p=authenticatedPrincipal(res);if(p.role!=='SELLER'&&p.role!=='ADMIN')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const item=await tx.get(req.params.id);if(!item||p.role==='SELLER'&&item.sellerId!==p.userId)return res.status(404).json({error:'TRANSACTION_NOT_FOUND'});
   if(typeof req.body?.agentId!=='string')return res.status(400).json({error:'AGENT_REQUIRED'});
-  const staff=await agents.getStaffForOwner(req.body.agentId,item.sellerId);if(!staff||staff.status!=='ACTIVE')return res.status(400).json({error:'INVALID_AGENT'});
+  const staff=await agents.getStaffForOwner(req.body.agentId,item.sellerId);if(!staff||staff.status!=='ACTIVE')return res.status(400).json({error:'INVALID_AGENT'});const access=await propertyAccess.getActive(req.body.agentId,item.sellerId,item.propertyId);if(!access)return res.status(403).json({error:'AGENT_PROPERTY_ACCESS_REQUIRED'});
   const updated=await tx.update(item.id,{agentId:req.body.agentId});if(updated)await record(item.id,p.userId,'AGENT_ASSIGNED',{agentId:req.body.agentId});return res.json(updated);
  });
  app.post('/api/v1/transactions/:id/status',auth,async(req,res)=>{
@@ -50,7 +51,7 @@ export function registerTransactionRoutes(app:Express,auth:RequestHandler,intere
  });
  app.post('/api/v1/transactions/:id/documents/:documentId/status',auth,async(req,res)=>{
   const p=authenticatedPrincipal(res);const item=await tx.get(req.params.id);if(!item||!actorAllowed(p,item))return res.status(404).json({error:'TRANSACTION_NOT_FOUND'});
-  if(p.role!=='AGENT'&&p.role!=='ADMIN')return res.status(403).json({error:'REVIEWER_REQUIRED'});
+  if(p.role!=='AGENT'&&p.role!=='ADMIN')return res.status(403).json({error:'REVIEWER_REQUIRED'});if(p.role==='AGENT'&&item.agentId!==p.userId)return res.status(403).json({error:'ASSIGNED_AGENT_REQUIRED'});
   const body=z.object({status:z.enum(transactionDocumentStatuses),notes:z.string().max(2000).optional()}).safeParse(req.body);if(!body.success)return res.status(400).json({error:'INVALID_DOCUMENT_STATUS'});
   const doc=(await documents.list(item.id)).find(x=>x.id===req.params.documentId);if(!doc)return res.status(404).json({error:'DOCUMENT_NOT_FOUND'});
   if(body.data.status==='VERIFIED'&&doc.status!=='SUBMITTED')return res.status(409).json({error:'DOCUMENT_NOT_SUBMITTED'});
