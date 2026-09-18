@@ -75,7 +75,8 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 - [x] `DONE` Property-scoped advisor API with homeowner authorization
 - [x] `DONE` Connect renewal plans into advisor context
 - [x] `DONE` Surface unpaid booked jobs in advisor context
-- [ ] `NEXT` Connect supplier reputation and authorised Academy/agent context
+- [x] `DONE` Connect supplier reputation into advisor context
+- [ ] `NEXT` Connect authorised Academy/agent context
 - [x] `DONE` Tool execution registry with explicit permissions
 - [x] `DONE` Approval workflow for quote requests, messages and scheduling
 - [x] `DONE` Idempotent AI task creation + action audit events
@@ -131,7 +132,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 ## Execution order
 
-**Current:** live Home Passport linkage → supplier/job actions → supplier reputation/authorised context → buyer/seller/investor expansion.
+**Current:** live Home Passport linkage → supplier/job actions → authorised Academy/agent context → buyer/seller/investor expansion.
 
 **Then:** media/experience → commercial integrations → production hardening.
 
