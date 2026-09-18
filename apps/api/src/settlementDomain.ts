@@ -6,4 +6,4 @@ export function calculateSettlement(grossAmountMinor:number,platformFeeMinor:num
 export const settlementTransitions:Record<SettlementStatus,readonly SettlementStatus[]>={PENDING:['ELIGIBLE','HELD'],ELIGIBLE:['PROCESSING','HELD'],PROCESSING:['PAID','FAILED','HELD'],PAID:[],FAILED:['PROCESSING','HELD'],HELD:['ELIGIBLE','PROCESSING']};
 export function canTransitionSettlementStatus(from:SettlementStatus,to:SettlementStatus){return from===to||settlementTransitions[from].includes(to)}
 
-export interface SupplierPayoutProvider { readonly name:string; initiatePayout(input:{settlementId:string;supplierId:string;amountMinor:number;currency:string;reference:string}):Promise<{status:'PROCESSING'|'PAID'|'FAILED';payoutReference?:string;failureReason?:string}>; }
+export interface SupplierPayoutProvider { readonly name:string; initiatePayout(input:{settlementId:string;supplierId:string;amountMinor:number;currency:string;reference:string;idempotencyKey?:string}):Promise<{status:'PROCESSING'|'PAID'|'FAILED';payoutReference?:string;failureReason?:string}>; }
