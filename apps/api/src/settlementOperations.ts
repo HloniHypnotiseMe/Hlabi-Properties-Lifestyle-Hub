@@ -2,14 +2,20 @@ import type {SupplierSettlement,SettlementStatus,SupplierPayoutProvider} from '.
 import type {SettlementRepository} from './settlementRepository.js';
 
 export type SettlementOperation='RETRY'|'HOLD'|'RELEASE'|'RECONCILE';
+const retryDelayMs=(attempt:number)=>Math.min(24*60*60*1000,Math.max(60*1000,2**Math.min(attempt,10)*60*1000));
 
 export async function processSettlement(settlement:SupplierSettlement,repository:SettlementRepository,provider:SupplierPayoutProvider){
   if(settlement.status!=='ELIGIBLE'&&settlement.status!=='FAILED') throw new Error(settlement.status==='HELD'?'SETTLEMENT_HELD':'SETTLEMENT_NOT_PROCESSABLE');
+  if(settlement.nextRetryAt&&new Date(settlement.nextRetryAt).getTime()>Date.now()) throw new Error('SETTLEMENT_RETRY_BACKOFF');
+  const attempt=(settlement.payoutAttempts??0)+1;
+  const idempotencyKey=settlement.payoutIdempotencyKey??`settlement-payout-${settlement.id}`;
+  const nextRetryAt=new Date(Date.now()+retryDelayMs(attempt)).toISOString();
+  await repository.recordPayoutAttempt(settlement.id,nextRetryAt);
   if(settlement.status==='FAILED') await repository.updateStatus(settlement.id,'PROCESSING');
   else if(settlement.status==='ELIGIBLE') await repository.updateStatus(settlement.id,'PROCESSING');
   const current=await repository.getById(settlement.id);
   if(!current) throw new Error('SETTLEMENT_NOT_FOUND');
-  const result=await provider.initiatePayout({settlementId:current.id,supplierId:current.supplierId,amountMinor:current.netAmountMinor,currency:current.currency,reference:`SETTLEMENT-${current.id}`});
+  const result=await provider.initiatePayout({settlementId:current.id,supplierId:current.supplierId,amountMinor:current.netAmountMinor,currency:current.currency,reference:`SETTLEMENT-${current.id}`,idempotencyKey});
   const status:SettlementStatus=result.status==='PAID'?'PAID':result.status==='FAILED'?'FAILED':'PROCESSING';
   return repository.updateStatus(current.id,status,result.payoutReference,result.failureReason);
 }
@@ -38,7 +44,7 @@ export async function releaseSettlement(id:string,repository:SettlementRepositor
 
 export async function reconcileSettlements(repository:SettlementRepository,provider:SupplierPayoutProvider){
   const settlements=await repository.listAll();
-  const actionable=settlements.filter(x=>x.status==='ELIGIBLE'||x.status==='FAILED');
+  const actionable=settlements.filter(x=>(x.status==='ELIGIBLE'||x.status==='FAILED')&&(!x.nextRetryAt||new Date(x.nextRetryAt).getTime()<=Date.now()));
   const results:any[]=[];
   for(const settlement of settlements.filter(x=>x.status==='PROCESSING')) results.push({id:settlement.id,status:'PROCESSING',action:'AWAITING_PROVIDER_CONFIRMATION'});
   for(const settlement of actionable){
