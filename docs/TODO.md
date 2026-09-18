@@ -34,7 +34,8 @@ This is the living execution tracker. `DONE` means the capability is represented
 - [x] `DONE` Memory + PostgreSQL persistence
 - [x] `DONE` Owner-scoped API
 - [x] `DONE` Lifestyle Hub dashboard/navigation
-- [ ] `NEXT` Connect passport to audits, renewal plans, jobs, suppliers, documents and reputation as live linked records
+- [x] `DONE` Connect passport to audits, renewal plans, jobs, suppliers and quotes as live linked records
+- [ ] `NEXT` Connect passport to reputation records; document/warranty records remain section data until a dedicated document store exists
 - [ ] `HARDEN` Document/warranty storage and retrieval controls
 - [ ] `HARDEN` POPIA retention, consent and deletion policy implementation
 
@@ -132,7 +133,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 ## Execution order
 
-**Current:** live Home Passport linkage → supplier/job actions → authorised Academy/agent context → buyer/seller/investor expansion.
+**Current:** supplier/job actions → authorised Academy/agent context → buyer/seller/investor expansion.
 
 **Then:** media/experience → commercial integrations → production hardening.
 
