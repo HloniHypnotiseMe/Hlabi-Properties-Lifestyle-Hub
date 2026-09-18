@@ -13,8 +13,8 @@ export function registerInvestorDiligenceRoutes(app:Express,auth:RequestHandler,
   const listing=(await listings.listPublic({})).find(x=>x.id===req.params.listingId); if(!listing)return res.status(404).json({error:'LISTING_NOT_FOUND'});
   const evidence=await diligence.list(p.userId,listing.id);
   const byKind=new Map(evidence.map(x=>[x.kind,x]));
-  const annualRent=Number(byKind.get('RENTAL_INCOME')?.value); const annualExpenses=Number(byKind.get('OPERATING_EXPENSES')?.value);
-  const metrics=calculateAcquisitionMetrics({askingPriceCents:listing.askingPriceCents,annualRentCents:Number.isFinite(annualRent)&&annualRent>0?annualRent:undefined,annualExpensesCents:Number.isFinite(annualExpenses)&&annualExpenses>=0?annualExpenses:undefined});
+  const rentEvidence=byKind.get('RENTAL_INCOME'); const expenseEvidence=byKind.get('OPERATING_EXPENSES'); const annualRent=Number(rentEvidence?.value); const annualExpenses=Number(expenseEvidence?.value);
+  const metrics=calculateAcquisitionMetrics({askingPriceCents:listing.askingPriceCents,annualRentCents:rentEvidence?.status==='VERIFIED'&&Number.isFinite(annualRent)&&annualRent>0?annualRent:undefined,annualExpensesCents:expenseEvidence?.status==='VERIFIED'&&Number.isFinite(annualExpenses)&&annualExpenses>=0?annualExpenses:undefined});
   return res.json({listing,evidence,metrics,nextAction:evidence.some(x=>x.status==='VERIFIED')?'Complete remaining diligence evidence before offer.':'Capture and verify ownership, income, expenses and compliance evidence before relying on acquisition metrics.'});
  });
  app.put('/api/v1/investor/diligence/:listingId/:kind',auth,async(req,res)=>{
