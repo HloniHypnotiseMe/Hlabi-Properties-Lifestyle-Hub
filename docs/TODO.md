@@ -77,6 +77,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 - [x] `DONE` Connect renewal plans into advisor context
 - [x] `DONE` Surface unpaid booked jobs in advisor context
 - [x] `DONE` Connect supplier reputation into advisor context
+- [x] `DONE` Confirmation-gated supplier quote requests and service-job scheduling through the property advisor
 - [ ] `NEXT` Connect authorised Academy/agent context
 - [x] `DONE` Tool execution registry with explicit permissions
 - [x] `DONE` Approval workflow for quote requests, messages and scheduling
