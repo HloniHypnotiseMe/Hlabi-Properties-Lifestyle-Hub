@@ -27,7 +27,7 @@ export function registerTransactionRoutes(app:Express,auth:RequestHandler,intere
  app.post('/api/v1/transactions/:id/agent',auth,async(req,res)=>{
   const p=authenticatedPrincipal(res);if(p.role!=='SELLER'&&p.role!=='ADMIN')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});const item=await tx.get(req.params.id);if(!item||p.role==='SELLER'&&item.sellerId!==p.userId)return res.status(404).json({error:'TRANSACTION_NOT_FOUND'});
   if(typeof req.body?.agentId!=='string')return res.status(400).json({error:'AGENT_REQUIRED'});
-  const staff=await agents.getStaffForOwner(req.body.agentId,p.userId);if(!staff||staff.status!=='ACTIVE')return res.status(400).json({error:'INVALID_AGENT'});
+  const staff=await agents.getStaffForOwner(req.body.agentId,item.sellerId);if(!staff||staff.status!=='ACTIVE')return res.status(400).json({error:'INVALID_AGENT'});
   const updated=await tx.update(item.id,{agentId:req.body.agentId});if(updated)await record(item.id,p.userId,'AGENT_ASSIGNED',{agentId:req.body.agentId});return res.json(updated);
  });
  app.post('/api/v1/transactions/:id/status',auth,async(req,res)=>{
