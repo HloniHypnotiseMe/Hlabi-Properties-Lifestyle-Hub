@@ -97,7 +97,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 - [x] `DONE` Transaction support journey — accepted offer → agent → documents → transfer → completion
 - [x] `DONE` Transaction participant authorization helper + regression coverage
 - [x] `DONE` Transaction document storage provider boundary + real upload/download flow
-- [ ] `NEXT` Full transaction API integration test suite
+- [x] `DONE` Full transaction API integration test suite (route-level in-memory integration coverage)
 
 ## 8. Media + experience
 
