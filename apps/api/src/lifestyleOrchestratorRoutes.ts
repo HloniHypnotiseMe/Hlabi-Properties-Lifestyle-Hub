@@ -5,14 +5,15 @@ import type { SupplierRepository } from './supplierRepository.js';
 import type { JobRepository } from './jobRepository.js';
 import type { RenewalRepository } from './renewalRepository.js';
 import type { BillingRepository } from './billingRepository.js';
+import type { ReputationRepository } from './reputationRepository.js';
 import type { AiProviderAdapter } from './aiProvider.js';
 import { buildLifestyleAdvisor } from './lifestyleOrchestrator.js';
 
-export function registerLifestyleOrchestratorRoutes(app:Express, authenticated:RequestHandler, repository:HomeownerRepository, passportRepository:HomePassportRepository, supplierRepository:SupplierRepository, jobRepository:JobRepository, renewalRepository:RenewalRepository, billingRepository:BillingRepository, aiProvider:AiProviderAdapter, aiModel:string|undefined){
+export function registerLifestyleOrchestratorRoutes(app:Express, authenticated:RequestHandler, repository:HomeownerRepository, passportRepository:HomePassportRepository, supplierRepository:SupplierRepository, jobRepository:JobRepository, renewalRepository:RenewalRepository, billingRepository:BillingRepository, reputationRepository:ReputationRepository, aiProvider:AiProviderAdapter, aiModel:string|undefined){
   app.get('/api/v1/homeowner/properties/:propertyId/advisor',authenticated,async(req,res)=>{
     const principal=res.locals.principal;
     if(!principal||principal.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});
-    const snapshot=await buildLifestyleAdvisor({ownerId:principal.userId,propertyId:req.params.propertyId,repository,passportRepository,supplierRepository,jobRepository,renewalRepository,billingRepository,aiProvider,aiModel});
+    const snapshot=await buildLifestyleAdvisor({ownerId:principal.userId,propertyId:req.params.propertyId,repository,passportRepository,supplierRepository,jobRepository,renewalRepository,billingRepository,reputationRepository,aiProvider,aiModel});
     if(!snapshot)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});
     return res.json({schema:'hlabi.lifestyle.advisor.v1',...snapshot});
   });
