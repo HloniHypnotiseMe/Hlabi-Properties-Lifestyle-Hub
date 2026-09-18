@@ -4,8 +4,7 @@ import type {SettlementRepository} from './settlementRepository.js';
 export type SettlementOperation='RETRY'|'HOLD'|'RELEASE'|'RECONCILE';
 
 export async function processSettlement(settlement:SupplierSettlement,repository:SettlementRepository,provider:SupplierPayoutProvider){
-  if(settlement.status!=='ELIGIBLE'&&settlement.status!=='FAILED'&&settlement.status!=='HELD'&&settlement.status!=='PROCESSING') throw new Error('SETTLEMENT_NOT_PROCESSABLE');
-  if(settlement.status==='HELD') throw new Error('SETTLEMENT_HELD');
+  if(settlement.status!=='ELIGIBLE'&&settlement.status!=='FAILED') throw new Error(settlement.status==='HELD'?'SETTLEMENT_HELD':'SETTLEMENT_NOT_PROCESSABLE');
   if(settlement.status==='FAILED') await repository.updateStatus(settlement.id,'PROCESSING');
   else if(settlement.status==='ELIGIBLE') await repository.updateStatus(settlement.id,'PROCESSING');
   const current=await repository.getById(settlement.id);
@@ -39,8 +38,9 @@ export async function releaseSettlement(id:string,repository:SettlementRepositor
 
 export async function reconcileSettlements(repository:SettlementRepository,provider:SupplierPayoutProvider){
   const settlements=await repository.listAll();
-  const actionable=settlements.filter(x=>x.status==='ELIGIBLE'||x.status==='PROCESSING'||x.status==='FAILED');
-  const results=[];
+  const actionable=settlements.filter(x=>x.status==='ELIGIBLE'||x.status==='FAILED');
+  const results:any[]=[];
+  for(const settlement of settlements.filter(x=>x.status==='PROCESSING')) results.push({id:settlement.id,status:'PROCESSING',action:'AWAITING_PROVIDER_CONFIRMATION'});
   for(const settlement of actionable){
     try{results.push(await processSettlement(settlement,repository,provider));}
     catch(error:any){results.push({id:settlement.id,status:'ERROR',error:String(error?.message??error)});}
