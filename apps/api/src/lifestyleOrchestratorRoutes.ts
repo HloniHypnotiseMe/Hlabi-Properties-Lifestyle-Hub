@@ -53,11 +53,10 @@ export function registerLifestyleOrchestratorRoutes(app:Express, authenticated:R
       });
       return res.status(201).json({actionId:action.id,executed:true,request});
     }
-    if(action.type==='PAY_JOB'){
-      const jobIds=new Set(action.linkedIds);
+    if(action.type==='SCHEDULE_JOB'){
       const scheduled=parsed.data.scheduledFor;
       if(!scheduled)return res.status(400).json({error:'SCHEDULED_FOR_REQUIRED'});
-      const jobId=[...jobIds][0];
+      const jobId=action.linkedIds[0];
       const job=await jobRepository.getJobForOwner(jobId,principal.userId);
       if(!job||job.propertyId!==property.id)return res.status(404).json({error:'JOB_NOT_FOUND'});
       const updated=await jobRepository.updateJobStatus(job.id,principal.userId,'SCHEDULED',scheduled);
