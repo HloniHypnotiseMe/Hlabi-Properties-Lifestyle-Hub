@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {authenticatedPrincipal} from './authentication.js';
 import type {TransactionInterestRepository} from './transactionInterestRepository.js';
 import type {TransactionRepository} from './transactionRepository.js';
-import {canTransitionTransactionStatus,transactionStatuses} from './transactionDomain.js';
+import {canTransitionTransactionStatus,transactionStatuses,transactionMilestoneStatuses} from './transactionDomain.js';
 import type {AgentRepository} from './agentRepository.js';
 import type {TransactionDocumentsRepository} from './transactionDocumentsRepository.js';
 import {transactionDocumentKinds,transactionDocumentStatuses} from './transactionDocumentsDomain.js';
@@ -44,7 +44,7 @@ export function registerTransactionRoutes(app:Express,auth:RequestHandler,intere
  app.post('/api/v1/transactions/:id/documents',auth,async(req,res)=>{
   const p=authenticatedPrincipal(res);const item=await tx.get(req.params.id);if(!item||!actorAllowed(p,item))return res.status(404).json({error:'TRANSACTION_NOT_FOUND'});
   const body=z.object({kind:z.enum(transactionDocumentKinds),label:z.string().min(2).max(160),storageKey:z.string().min(1).max(1000),notes:z.string().max(2000).optional()}).safeParse(req.body);if(!body.success)return res.status(400).json({error:'INVALID_DOCUMENT'});
-  const existing=(await documents.list(item.id)).find(x=>x.kind===body.data.kind);let doc=existing?await documents.update(existing.id,{status:'SUBMITTED',label:undefined,storageKey:body.data.storageKey,notes:body.data.notes,submittedBy:p.userId}):await documents.create({transactionId:item.id,kind:body.data.kind,label:body.data.label,status:'SUBMITTED',storageKey:body.data.storageKey,notes:body.data.notes,submittedBy:p.userId});
+  const existing=(await documents.list(item.id)).find(x=>x.kind===body.data.kind);let doc=existing?await documents.update(existing.id,{status:'SUBMITTED',storageKey:body.data.storageKey,notes:body.data.notes,submittedBy:p.userId}):await documents.create({transactionId:item.id,kind:body.data.kind,label:body.data.label,status:'SUBMITTED',storageKey:body.data.storageKey,notes:body.data.notes,submittedBy:p.userId});
   if(doc)await record(item.id,p.userId,'DOCUMENT_SUBMITTED',{documentId:doc.id,kind:doc.kind});return res.status(existing?200:201).json(doc);
  });
  app.post('/api/v1/transactions/:id/documents/:documentId/status',auth,async(req,res)=>{
