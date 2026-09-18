@@ -5,12 +5,13 @@ import type { SupplierRepository } from './supplierRepository.js';
 import type { JobRepository } from './jobRepository.js';
 import type { RenewalRepository } from './renewalRepository.js';
 import type { BillingRepository } from './billingRepository.js';
+import type { ReputationRepository } from './reputationRepository.js';
 
 export type AdvisorSource = 'PROPERTY'|'HOME_PASSPORT'|'AUDIT'|'SUPPLIER'|'QUOTE'|'JOB'|'PAYMENT'|'RENEWAL'|'SYSTEM';
 export interface AdvisorAction { id:string; type:'REVIEW_AUDIT'|'REQUEST_QUOTES'|'REVIEW_QUOTES'|'PAY_JOB'|'FOLLOW_JOB'|'UPDATE_PASSPORT'|'CONTACT_SUPPLIER'|'REVIEW_RENEWAL'; title:string; rationale:string; sources:AdvisorSource[]; requiresConfirmation:boolean; linkedIds:string[]; }
 export interface AdvisorSnapshot { property:any; passport:any|null; latestAudit:any|null; renewalPlan:any|null; renewalTasks:any[]; eligibleSupplierCount:number; quoteRequests:any[]; jobs:any[]; actions:AdvisorAction[]; aiSummary?:string; ai:{enabled:boolean;provider?:string;model?:string}; }
 
-export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:string;repository:HomeownerRepository;passportRepository:HomePassportRepository;supplierRepository:SupplierRepository;jobRepository:JobRepository;billingRepository?:BillingRepository;renewalRepository?:RenewalRepository;aiProvider?:AiProviderAdapter;aiModel?:string;}):Promise<AdvisorSnapshot|null>{
+export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:string;repository:HomeownerRepository;passportRepository:HomePassportRepository;supplierRepository:SupplierRepository;jobRepository:JobRepository;reputationRepository?:ReputationRepository;billingRepository?:BillingRepository;renewalRepository?:RenewalRepository;aiProvider?:AiProviderAdapter;aiModel?:string;}):Promise<AdvisorSnapshot|null>{
   const property=await input.repository.getPropertyForOwner(input.propertyId,input.ownerId); if(!property)return null;
   const renewalPlan=input.renewalRepository?await input.renewalRepository.getPlanForOwner(property.id,input.ownerId):null;
   const [passport,latestAudit,eligibleSuppliers,quoteRequests,jobs,renewalTasks]=await Promise.all([
@@ -38,7 +39,8 @@ export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:str
     if(openTasks.length) actions.push({id:'renewal',type:'REVIEW_RENEWAL',title:'Review renewal plan',rationale:`${openTasks.length} renewal task${openTasks.length===1?'':'s'} remain active.`,sources:['RENEWAL','PROPERTY'],requiresConfirmation:false,linkedIds:[renewalPlan.id,...openTasks.map(t=>t.id)]});
   }
   if(!passport) actions.push({id:'passport',type:'UPDATE_PASSPORT',title:'Create your Home Passport',rationale:'A Home Passport gives the advisor a durable property context for future decisions.',sources:['HOME_PASSPORT','PROPERTY'],requiresConfirmation:false,linkedIds:[property.id]});
-  const snapshot={property,passport,latestAudit,renewalPlan,renewalTasks,eligibleSupplierCount:eligibleSuppliers.length,quoteRequests,jobs,actions};
+  const supplierReputation=input.reputationRepository?await Promise.all(eligibleSuppliers.map(s=>input.reputationRepository!.getSummaryForSupplier(s.id))):[];
+  const snapshot={property,passport,latestAudit,renewalPlan,renewalTasks,eligibleSupplierCount:eligibleSuppliers.length,supplierReputation,quoteRequests,jobs,actions};
   let aiSummary:string|undefined; let aiEnabled=false; let provider:string|undefined;
   if(input.aiProvider){try{const result=await input.aiProvider.generate({provider:'OLLAMA',model:input.aiModel??'llama3.2',temperature:0.1,maxTokens:240,system:'You are Hlabi\'s property advisor. Use only supplied facts. Never invent prices, supplier verification, qualifications, completion, regulatory status or actions already taken. Return a concise next-step summary.',prompt:JSON.stringify({property,passport,latestAudit,renewalPlan,renewalTasks,quoteRequests,jobs,actions})});aiSummary=result.text;aiEnabled=true;provider=result.provider;}catch{aiEnabled=false;}}
   return {...snapshot,aiSummary,ai:{enabled:aiEnabled,provider,model:aiEnabled?(input.aiModel??'llama3.2'):undefined}};
