@@ -1,0 +1,8 @@
+import {useState} from 'react';
+import {Bot,Send} from 'lucide-react';
+
+export default function AcademyTutor({enrollmentId,moduleIndex}:{enrollmentId?:string;moduleIndex:number}){
+ const [question,setQuestion]=useState('');const [answer,setAnswer]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ const ask=async()=>{if(!enrollmentId||question.trim().length<3||busy)return;setBusy(true);setError('');const r=await fetch('/api/v1/academy/tutor',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({enrollmentId,moduleIndex,question:question.trim()})});const body=await r.json().catch(()=>({}));if(!r.ok)setError(body.error==='ACADEMY_TUTOR_UNAVAILABLE'?'Tutor is temporarily unavailable. Use the lesson material and retry later.':'Tutor request could not be completed.');else{setAnswer(body.answer??'');setQuestion('');}setBusy(false);};
+ return <aside className="academy-checkpoint" aria-label="Academy AI Tutor"><div><p className="eyebrow">AI TUTOR</p><strong><Bot size={17}/> Ask about this competency</strong><span>Use the tutor to clarify concepts. Verify current legal or regulatory matters against authoritative sources.</span></div><textarea value={question} onChange={e=>setQuestion(e.target.value)} placeholder="What do I need to understand here?" maxLength={2000} disabled={busy||!enrollmentId}/><button className="secondary" onClick={ask} disabled={busy||question.trim().length<3||!enrollmentId}>{busy?'Thinking…':'Ask tutor'} <Send size={15}/></button>{error&&<small role="alert">{error}</small>}{answer&&<div className="journey-next"><b>Tutor response</b><p>{answer}</p></div>}</aside>;
+}
