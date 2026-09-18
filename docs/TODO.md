@@ -26,7 +26,8 @@ This is the living execution tracker. `DONE` means the capability is represented
 - [x] `DONE` End-to-end supplier/customer workflow tests — Pay → Complete → Review coverage added
 - [ ] `HARDEN` Supplier verification operations/admin controls
 - [x] `DONE` Quote selection → booking → payment/settlement server hardening
-- [ ] `HARDEN` Provider-backed payment sandbox, webhook reconciliation and settlement retries
+- [x] `DONE` Provider-backed payment sandbox + webhook reconciliation + supplier settlement ledger
+- [ ] `HARDEN` Live provider payout adapter, settlement retries and reconciliation operations
 
 ## 3. Home Passport
 
@@ -109,7 +110,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 ## 9. Integrations / commercial infrastructure
 
-- [ ] `NEXT` Payment/settlement sandbox for supplier jobs — provider/webhook hardening remains
+- [x] `DONE` Payment/settlement sandbox for supplier jobs
 - [ ] `NEXT` Messaging provider sandbox + delivery events
 - [ ] `NEXT` Document storage provider boundary
 - [ ] `NEXT` Scheduling provider boundary
@@ -142,7 +143,7 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 **Current:** transaction document storage/upload + API integration hardening.
 
-**Then:** media/experience → commercial integrations → production hardening.
+**Then:** commercial operations → production hardening.
 
 ## Product test
 
