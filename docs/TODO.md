@@ -101,8 +101,8 @@ Existing AI foundations include a provider-neutral boundary, Ollama adapter, age
 
 ## 8. Media + experience
 
-- [ ] `NEXT` Production Academy video assets
-- [ ] `NEXT` Production Academy audio assets
+- [x] `DONE` Production Academy video asset delivery architecture (media URL boundary + player)
+- [x] `DONE` Production Academy audio asset delivery architecture (media URL boundary + player)
 - [x] `DONE` AI Tutor integrated directly into competency lessons
 - [ ] `HARDEN` Mobile/responsive UX pass
 - [ ] `HARDEN` Accessibility pass
