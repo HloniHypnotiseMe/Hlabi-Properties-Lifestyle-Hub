@@ -2,7 +2,7 @@ import { FormEvent, useState } from 'react';
 import { ArrowRight, CheckCircle2, KeyRound, Store, TrendingUp, X } from 'lucide-react';
 
 type JourneyKey = 'BUYER' | 'SELLER' | 'INVESTOR';
-type Field = { key: string; label: string; placeholder?: string; type?: string };
+type Field = { key: string; label: string; placeholder?: string; type?: string; required?: boolean };
 const configs: Record<JourneyKey, { title: string; intro: string; icon: typeof KeyRound; steps: string[]; fields: Field[] }> = {
   BUYER: {
     title: 'Buying a home',
@@ -16,6 +16,7 @@ const configs: Record<JourneyKey, { title: string; intro: string; icon: typeof K
       { key: 'propertyTypes', label: 'Property types', placeholder: 'e.g. House, Apartment' },
       { key: 'maxBudget', label: 'Maximum budget (R)', placeholder: 'e.g. 2500000', type: 'number' },
       { key: 'bedrooms', label: 'Bedrooms', placeholder: 'e.g. 3', type: 'number' },
+      { key: 'financingStatus', label: 'Finance status', placeholder: 'UNKNOWN, CASH, PRE_APPROVED or NEEDS_FINANCE' },
     ],
   },
   SELLER: {
@@ -27,6 +28,7 @@ const configs: Record<JourneyKey, { title: string; intro: string; icon: typeof K
       { key: 'propertyId', label: 'Property ID', placeholder: 'Your Hlabi property ID' },
       { key: 'targetSaleDate', label: 'Target sale date', type: 'date' },
       { key: 'reason', label: 'Reason for selling', placeholder: 'What is driving the sale?' },
+      { key: 'readiness', label: 'Preparation stage', placeholder: 'NOT_STARTED, PREPARING or READY_TO_LIST' },
       { key: 'notes', label: 'Notes', placeholder: 'Anything the property team should know?' },
     ],
   },
@@ -52,9 +54,10 @@ export default function JourneyExplorer() {
   const [form,setForm]=useState<Record<string,string>>({});
   const [status,setStatus]=useState<'idle'|'saving'|'saved'|'error'>('idle');
   const [message,setMessage]=useState('');
+  const [savedJourney,setSavedJourney]=useState<Record<string,unknown>|null>(null);
   const config=selected?configs[selected]:null;
-  const close=()=>{setSelected(null);setStatus('idle');setMessage('');setForm({});};
-  const open=(key:JourneyKey)=>{setSelected(key);setStatus('idle');setMessage('');setForm({});};
+  const close=()=>{setSelected(null);setStatus('idle');setMessage('');setForm({});setSavedJourney(null);};
+  const open=(key:JourneyKey)=>{setSelected(key);setStatus('idle');setMessage('');setForm({});setSavedJourney(null);};
   const submit=async(e:FormEvent)=>{
     e.preventDefault(); if(!selected)return;
     setStatus('saving'); setMessage('');
@@ -67,7 +70,7 @@ export default function JourneyExplorer() {
     try{
       const res=await fetch(selected==='BUYER'?'/api/v1/buyer/journey':selected==='SELLER'?'/api/v1/seller/journey':'/api/v1/investor/journey',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       if(!res.ok) throw new Error((await res.json()).error||'Unable to save journey');
-      setStatus('saved'); setMessage('Your journey is now saved to your account.');
+      setSavedJourney(await res.json()); setStatus('saved'); setMessage('Your journey is now saved to your account.');
     }catch(err){setStatus('error');setMessage(err instanceof Error?err.message:'Unable to save journey. Sign in with the matching role and try again.');}
   };
   return <>
@@ -76,10 +79,10 @@ export default function JourneyExplorer() {
     </div>
     {config&&<div className="journey-overlay" role="dialog" aria-modal="true" aria-label={config.title}>
       <div className="journey-modal"><button className="journey-close" onClick={close} aria-label="Close"><X size={20}/></button>
-        {status==='saved'?<div className="journey-success"><CheckCircle2 size={42}/><p className="eyebrow">JOURNEY SAVED</p><h2>Now we can work from a real plan.</h2><p>{message}</p><button className="primary" onClick={close}>Continue <ArrowRight size={18}/></button></div>:
+        {status==='saved'?<div className="journey-success"><CheckCircle2 size={42}/><p className="eyebrow">JOURNEY SAVED</p><h2>Now we can work from a real plan.</h2><p>{message}</p>{selected==='SELLER'&&<div className="journey-next"><b>Next action</b><span>{String(savedJourney?.readiness)==='READY_TO_LIST'?'Move into listing and buyer preparation.':String(savedJourney?.readiness)==='PREPARING'?'Complete property preparation and readiness checks.':'Capture the property and start preparation.'}</span></div>}{selected==='BUYER'&&<div className="journey-next"><b>Next action</b><span>{String(savedJourney?.financingStatus)==='NEEDS_FINANCE'?'Connect the finance pathway before narrowing the purchase plan.':'Move into property discovery and shortlist suitable opportunities.'}</span></div>}{selected==='INVESTOR'&&<div className="journey-next"><b>Next action</b><span>Screen opportunities against your strategy, budget, yield and risk criteria.</span></div>}<button className="primary" onClick={close}>Continue <ArrowRight size={18}/></button></div>:
         <form onSubmit={submit}><p className="eyebrow">YOUR PROPERTY JOURNEY</p><h2>{config.title}</h2><p className="journey-modal-intro">{config.intro}</p>
           <div className="journey-plan">{config.steps.map((step,i)=><div key={step}><b>0{i+1}</b><span>{step}</span></div>)}</div>
-          <div className="journey-intake"><h3>Build your starting plan</h3>{config.fields.map(field=><label key={field.key}>{field.label}<input required={['propertyId','strategy','riskProfile'].includes(field.key)} type={field.type||'text'} placeholder={field.placeholder} value={form[field.key]||''} onChange={e=>setForm({...form,[field.key]:e.target.value})}/></label>)}</div>
+          <div className="journey-intake"><h3>Build your starting plan</h3>{config.fields.map(field=><label key={field.key}>{field.label}<input required={field.required||['propertyId','strategy','riskProfile'].includes(field.key)} type={field.type||'text'} placeholder={field.placeholder} value={form[field.key]||''} onChange={e=>setForm({...form,[field.key]:e.target.value})}/></label>)}</div>
           {message&&<p role="alert">{message}</p>}
           <button className="primary journey-submit" disabled={status==='saving'}>{status==='saving'?'Saving…':'Save my journey'} <ArrowRight size={18}/></button>
           <small className="journey-note">Journey data is planning context. It is not a credit, valuation, legal, tax or investment recommendation.</small>
