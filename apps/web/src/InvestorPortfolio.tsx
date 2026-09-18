@@ -24,5 +24,5 @@ function DiligencePanel({listingId}:{listingId:string}){
 function EvidenceEditor({listingId,kind,existing}:{listingId:string;kind:string;existing?:any}){
  const[v,setV]=useState(existing?.value??'');const[status,setStatus]=useState(existing?.status==='VERIFIED'?'VERIFIED':'CAPTURED');const[message,setMessage]=useState('');
  const save=async()=>{const r=await fetch('/api/v1/investor/diligence/'+listingId+'/'+kind,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,label:kind.replaceAll('_',' '),value:v,source:'Investor captured evidence'})});setMessage(r.ok?'Saved':'Unable to save');};
- return <div><label>{kind.replaceAll('_',' ')} <select value={status} onChange={e=>setStatus(e.target.value)}><option>CAPTURED</option><option>VERIFIED</option><option>MISSING</option></select></label><input value={v} onChange={e=>setV(e.target.value)} placeholder="Evidence value / reference"/><button onClick={save}>Save</button>{message&&<small>{message}</small>}</div>
+ return <div><label>{kind.replaceAll('_',' ')} <select value={status} onChange={e=>setStatus(e.target.value)}><option>CAPTURED</option><option>MISSING</option></select></label><input value={v} onChange={e=>setV(e.target.value)} placeholder="Evidence value / reference"/><button onClick={save}>Save</button>{message&&<small>{message}</small>}</div>
 }
