@@ -10,10 +10,11 @@ import {transactionDocumentKinds,transactionDocumentStatuses} from './transactio
 import type {TransactionAuditRepository} from './transactionAuditRepository.js';
 import {canActorAccessTransaction} from './transactionAuthorization.js';
 import type {AgentPropertyAccessRepository} from './agentPropertyAccessRepository.js';
+import type {TransactionDocumentStorageProvider} from './transactionDocumentStorage.js';
 
 const initialDocuments=[['OFFER_ACCEPTANCE','Offer acceptance'],['IDENTITY','Identity documents'],['FINANCE','Finance / proof of funds'],['COMPLIANCE','Compliance documents'],['TRANSFER','Transfer / registration documents'],['OTHER','Other transaction documents']] as const;
 
-export function registerTransactionRoutes(app:Express,auth:RequestHandler,interest:TransactionInterestRepository,tx:TransactionRepository,agents:AgentRepository,documents:TransactionDocumentsRepository,audit:TransactionAuditRepository,propertyAccess:AgentPropertyAccessRepository){
+export function registerTransactionRoutes(app:Express,auth:RequestHandler,interest:TransactionInterestRepository,tx:TransactionRepository,agents:AgentRepository,documents:TransactionDocumentsRepository,audit:TransactionAuditRepository,propertyAccess:AgentPropertyAccessRepository,storage:TransactionDocumentStorageProvider){
  const actorAllowed=(p:any,item:any)=>canActorAccessTransaction(p,item);
  const seedDocuments=async(transactionId:string)=>{for(const [kind,label] of initialDocuments){if(!(await documents.list(transactionId)).some(x=>x.kind===kind))await documents.create({transactionId,kind,status:'REQUIRED',label});}};
  const record=async(transactionId:string,actorId:string,eventType:string,payload:Record<string,unknown>={})=>audit.append({transactionId,actorId,eventType,payload});
@@ -42,6 +43,23 @@ export function registerTransactionRoutes(app:Express,auth:RequestHandler,intere
   const body=z.object({status:z.enum(transactionMilestoneStatuses),notes:z.string().max(2000).optional()}).safeParse(req.body);if(!body.success)return res.status(400).json({error:'INVALID_MILESTONE'});
   const milestone=(await tx.listMilestones(item.id)).find(x=>x.id===req.params.milestoneId);if(!milestone)return res.status(404).json({error:'MILESTONE_NOT_FOUND'});
   const updated=await tx.updateMilestone(milestone.id,body.data.status,body.data.notes);if(updated)await record(item.id,p.userId,'MILESTONE_CHANGED',{milestoneId:milestone.id,status:updated.status});return res.json(updated);
+ });
+ app.post('/api/v1/transactions/:id/documents/upload',auth,async(req,res)=>{
+  const p=authenticatedPrincipal(res);const item=await tx.get(req.params.id);if(!item||!actorAllowed(p,item))return res.status(404).json({error:'TRANSACTION_NOT_FOUND'});
+  const body=z.object({kind:z.enum(transactionDocumentKinds),label:z.string().min(2).max(160),fileName:z.string().min(1).max(160),contentType:z.string().min(3).max(120),contentBase64:z.string().min(1).max(11000000),notes:z.string().max(2000).optional()}).safeParse(req.body);if(!body.success)return res.status(400).json({error:'INVALID_DOCUMENT_UPLOAD'});
+  let content:Buffer;try{content=Buffer.from(body.data.contentBase64,'base64');}catch{return res.status(400).json({error:'INVALID_DOCUMENT_DATA'});}
+  if(!content.length)return res.status(400).json({error:'EMPTY_DOCUMENT'});if(content.length>8*1024*1024)return res.status(413).json({error:'DOCUMENT_TOO_LARGE'});
+  const existing=(await documents.list(item.id)).find(x=>x.kind===body.data.kind);const documentId=existing?.id??crypto.randomUUID();
+  const stored=await storage.put({transactionId:item.id,documentId,fileName:body.data.fileName,contentType:body.data.contentType,content});
+  const doc=existing?await documents.update(existing.id,{status:'SUBMITTED',storageKey:stored.storageKey,notes:body.data.notes,submittedBy:p.userId}):await documents.create({transactionId:item.id,kind:body.data.kind,label:body.data.label,status:'SUBMITTED',storageKey:stored.storageKey,notes:body.data.notes,submittedBy:p.userId} as any);
+  if(doc)await record(item.id,p.userId,'DOCUMENT_UPLOADED',{documentId:doc.id,kind:doc.kind,sizeBytes:stored.sizeBytes});return res.status(existing?200:201).json(doc);
+ });
+ app.get('/api/v1/transactions/:id/documents/:documentId/download',auth,async(req,res)=>{
+  const p=authenticatedPrincipal(res);const item=await tx.get(req.params.id);if(!item||!actorAllowed(p,item))return res.status(404).json({error:'TRANSACTION_NOT_FOUND'});
+  const doc=await documents.get(req.params.documentId);if(!doc||doc.transactionId!==item.id||!doc.storageKey)return res.status(404).json({error:'DOCUMENT_NOT_FOUND'});
+  let stored;try{stored=await storage.get({transactionId:item.id,storageKey:doc.storageKey});}catch(error:any){if(error?.message==='TRANSACTION_STORAGE_SCOPE'||error?.message==='INVALID_STORAGE_KEY')return res.status(403).json({error:'DOCUMENT_STORAGE_FORBIDDEN'});throw error;}
+  if(!stored)return res.status(404).json({error:'DOCUMENT_FILE_NOT_FOUND'});
+  await record(item.id,p.userId,'DOCUMENT_DOWNLOADED',{documentId:doc.id});res.setHeader('Content-Type',stored.contentType);res.setHeader('Content-Disposition',`attachment; filename="${stored.fileName??'document'}"`);return res.send(stored.content);
  });
  app.post('/api/v1/transactions/:id/documents',auth,async(req,res)=>{
   const p=authenticatedPrincipal(res);const item=await tx.get(req.params.id);if(!item||!actorAllowed(p,item))return res.status(404).json({error:'TRANSACTION_NOT_FOUND'});
