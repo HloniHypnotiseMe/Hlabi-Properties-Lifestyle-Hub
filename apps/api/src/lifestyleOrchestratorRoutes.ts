@@ -9,6 +9,9 @@ import type { BillingRepository } from './billingRepository.js';
 import type { ReputationRepository } from './reputationRepository.js';
 import type { AiProviderAdapter } from './aiProvider.js';
 import { buildLifestyleAdvisor } from './lifestyleOrchestrator.js';
+import type { AgentRepository } from './agentRepository.js';
+import type { AcademyRepository } from './academyRepository.js';
+import type { AcademyAssessmentRepository } from './academyAssessmentRepository.js';
 
 const actionSchema=z.object({
   actionId:z.string().min(1),
@@ -19,11 +22,11 @@ const actionSchema=z.object({
   description:z.string().min(10).max(3000).optional(),
 });
 
-export function registerLifestyleOrchestratorRoutes(app:Express, authenticated:RequestHandler, repository:HomeownerRepository, passportRepository:HomePassportRepository, supplierRepository:SupplierRepository, jobRepository:JobRepository, renewalRepository:RenewalRepository, billingRepository:BillingRepository, reputationRepository:ReputationRepository, aiProvider:AiProviderAdapter, aiModel:string|undefined){
+export function registerLifestyleOrchestratorRoutes(app:Express, authenticated:RequestHandler, repository:HomeownerRepository, passportRepository:HomePassportRepository, supplierRepository:SupplierRepository, jobRepository:JobRepository, renewalRepository:RenewalRepository, billingRepository:BillingRepository, reputationRepository:ReputationRepository, aiProvider:AiProviderAdapter, aiModel:string|undefined, agentRepository?:AgentRepository, academyRepository?:AcademyRepository, academyAssessmentRepository?:AcademyAssessmentRepository){
   app.get('/api/v1/homeowner/properties/:propertyId/advisor',authenticated,async(req,res)=>{
     const principal=res.locals.principal;
     if(!principal||principal.role!=='HOMEOWNER')return res.status(403).json({error:'ROLE_NOT_ALLOWED'});
-    const snapshot=await buildLifestyleAdvisor({ownerId:principal.userId,propertyId:req.params.propertyId,repository,passportRepository,supplierRepository,jobRepository,renewalRepository,billingRepository,reputationRepository,aiProvider,aiModel});
+    const snapshot=await buildLifestyleAdvisor({ownerId:principal.userId,propertyId:req.params.propertyId,repository,passportRepository,supplierRepository,jobRepository,renewalRepository,billingRepository,reputationRepository,aiProvider,aiModel,agentRepository,academyRepository,academyAssessmentRepository});
     if(!snapshot)return res.status(404).json({error:'PROPERTY_NOT_FOUND'});
     return res.json({schema:'hlabi.lifestyle.advisor.v1',...snapshot});
   });
