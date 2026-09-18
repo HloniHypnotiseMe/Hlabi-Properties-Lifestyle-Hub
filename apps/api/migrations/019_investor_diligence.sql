@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS investor_diligence_evidence (
  notes TEXT,
  captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  verified_at TIMESTAMPTZ,
+ verified_by UUID REFERENCES users(id),
  UNIQUE(investor_id,listing_id,kind)
 );
 CREATE INDEX IF NOT EXISTS investor_diligence_evidence_idx ON investor_diligence_evidence(investor_id,listing_id,kind);
+
+ALTER TABLE investor_diligence_evidence ADD COLUMN IF NOT EXISTS verified_by UUID REFERENCES users(id);
