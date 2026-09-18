@@ -15,3 +15,9 @@ test('transaction access is limited to participants or admin',()=>{
 test('unassigned agents cannot access transaction',()=>{
  assert.equal(canActorAccessTransaction({role:'AGENT',userId:'agent-2'},{buyerId:'buyer-1',sellerId:'seller-1'}),false);
 });
+
+
+test('unassigned agent is not authorized for a transaction even when participant identity matches no role',()=>{
+ const transaction={buyerId:'buyer-1',sellerId:'seller-1',agentId:'agent-1'};
+ assert.equal(canActorAccessTransaction({role:'AGENT',userId:'agent-2'},transaction),false);
+});
