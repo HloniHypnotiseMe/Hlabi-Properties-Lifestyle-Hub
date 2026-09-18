@@ -16,7 +16,10 @@ export interface PaymentTransaction {
   createdAt:string; updatedAt:string;
 }
 
+export interface PaymentWebhookEvent { eventId:string; type:'PAYMENT_SUCCEEDED'|'PAYMENT_FAILED'|'PAYMENT_REFUNDED'; reference:string; externalId?:string; failureCode?:string; failureReason?:string; }
+
 export interface PaymentProvider {
   readonly name:string;
   createPayment(input:{amountMinor:number;currency:string;reference:string;customerId:string;returnUrl?:string}):Promise<{status:'PENDING'|'SUCCEEDED'|'FAILED';externalId?:string}>;
+  parseWebhook(input:{body:Record<string,unknown>;signature?:string}):Promise<PaymentWebhookEvent>;
 }
