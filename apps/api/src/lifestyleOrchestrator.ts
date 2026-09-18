@@ -8,7 +8,7 @@ import type { BillingRepository } from './billingRepository.js';
 import type { ReputationRepository } from './reputationRepository.js';
 
 export type AdvisorSource = 'PROPERTY'|'HOME_PASSPORT'|'AUDIT'|'SUPPLIER'|'QUOTE'|'JOB'|'PAYMENT'|'RENEWAL'|'SYSTEM';
-export interface AdvisorAction { id:string; type:'REVIEW_AUDIT'|'REQUEST_QUOTES'|'REVIEW_QUOTES'|'PAY_JOB'|'FOLLOW_JOB'|'UPDATE_PASSPORT'|'CONTACT_SUPPLIER'|'REVIEW_RENEWAL'; title:string; rationale:string; sources:AdvisorSource[]; requiresConfirmation:boolean; linkedIds:string[]; }
+export interface AdvisorAction { id:string; type:'REVIEW_AUDIT'|'REQUEST_QUOTES'|'REVIEW_QUOTES'|'PAY_JOB'|'SCHEDULE_JOB'|'FOLLOW_JOB'|'UPDATE_PASSPORT'|'CONTACT_SUPPLIER'|'REVIEW_RENEWAL'; title:string; rationale:string; sources:AdvisorSource[]; requiresConfirmation:boolean; linkedIds:string[]; }
 export interface AdvisorSnapshot { property:any; passport:any|null; latestAudit:any|null; renewalPlan:any|null; renewalTasks:any[]; eligibleSupplierCount:number; quoteRequests:any[]; jobs:any[]; actions:AdvisorAction[]; aiSummary?:string; ai:{enabled:boolean;provider?:string;model?:string}; }
 
 export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:string;repository:HomeownerRepository;passportRepository:HomePassportRepository;supplierRepository:SupplierRepository;jobRepository:JobRepository;reputationRepository?:ReputationRepository;billingRepository?:BillingRepository;renewalRepository?:RenewalRepository;aiProvider?:AiProviderAdapter;aiModel?:string;}):Promise<AdvisorSnapshot|null>{
@@ -33,6 +33,8 @@ export async function buildLifestyleAdvisor(input:{ownerId:string;propertyId:str
   const payableJobs=input.billingRepository?await Promise.all(jobs.filter(j=>['REQUESTED','SCHEDULED'].includes(j.status)).map(async j=>({job:j,paid:Boolean(await input.billingRepository!.getSuccessfulTransactionForJob(j.id,input.ownerId))}))).then(x=>x.filter(y=>!y.paid).map(y=>y.job)):[];
   if(payableJobs.length) actions.push({id:'payments',type:'PAY_JOB',title:'Pay for booked work',rationale:`${payableJobs.length} booked service job${payableJobs.length===1?' is':'s are'} ready for payment.`,sources:['JOB','PAYMENT'],requiresConfirmation:true,linkedIds:payableJobs.map(j=>j.id)});
   const activeJobs=jobs.filter(j=>!['COMPLETED','CANCELLED'].includes(j.status));
+  const schedulableJobs=jobs.filter(j=>j.status==='REQUESTED');
+  if(schedulableJobs.length) actions.push({id:'schedule-job',type:'SCHEDULE_JOB',title:'Schedule booked work',rationale:`${schedulableJobs.length} booked service job${schedulableJobs.length===1?' is':'s are'} awaiting scheduling.`,sources:['JOB','SUPPLIER'],requiresConfirmation:true,linkedIds:schedulableJobs.map(j=>j.id)});
   if(activeJobs.length) actions.push({id:'jobs',type:'FOLLOW_JOB',title:'Follow active work',rationale:`${activeJobs.length} service job${activeJobs.length===1?' is':'s are'} still active.`,sources:['JOB','SUPPLIER'],requiresConfirmation:false,linkedIds:activeJobs.map(j=>j.id)});
   if(renewalPlan) {
     const openTasks=renewalTasks.filter(t=>!['COMPLETED','CANCELLED'].includes(t.status));
